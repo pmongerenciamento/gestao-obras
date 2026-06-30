@@ -216,4 +216,83 @@ São produtos complementares, não excludentes. O nosso é mais profundo.
 
 ---
 
+## 10. Estrutura de Pastas
+
+```
+gestao-obras/
+├── backend/
+│   ├── app/
+│   │   ├── main.py
+│   │   ├── core/
+│   │   │   ├── config.py
+│   │   │   ├── security.py          # validação de JWT do Supabase Auth
+│   │   │   └── dependencies.py      # get_current_user, get_db, etc
+│   │   ├── api/
+│   │   │   └── v1/
+│   │   │       ├── routes_projects.py   # CRUD + resumo p/ cards do painel
+│   │   │       ├── routes_import.py
+│   │   │       ├── routes_snapshots.py
+│   │   │       ├── routes_line_of_balance.py
+│   │   │       └── routes_dashboard.py  # gestão à vista
+│   │   ├── domain/
+│   │   │   ├── import_mpp/
+│   │   │   ├── snapshots/
+│   │   │   ├── line_of_balance/
+│   │   │   └── dashboard/
+│   │   ├── infra/
+│   │   │   ├── mpxj/
+│   │   │   ├── db/
+│   │   │   └── storage/
+│   │   ├── schemas/
+│   │   └── services/
+│   ├── tests/
+│   ├── migrations/
+│   ├── requirements.txt
+│   └── README.md
+│
+├── frontend/
+│   ├── app/
+│   │   ├── (auth)/
+│   │   │   └── login/
+│   │   │       └── page.tsx         # e-mail, senha, "Esqueceu a senha?"
+│   │   ├── (app)/                   # área autenticada
+│   │   │   ├── layout.tsx           # sidebar + header (nome usuário, logout)
+│   │   │   ├── page.tsx             # painel principal: cards de projetos + "+ Novo Projeto"
+│   │   │   └── projetos/
+│   │   │       └── [projectId]/
+│   │   │           ├── layout.tsx           # nome do projeto + abas dos módulos
+│   │   │           ├── importacao/page.tsx
+│   │   │           ├── linha-de-balanco/page.tsx
+│   │   │           ├── gestao-a-vista/page.tsx
+│   │   │           ├── suprimentos/page.tsx
+│   │   │           ├── kanban/page.tsx
+│   │   │           └── relatorios/page.tsx
+│   │   └── layout.tsx               # root layout (fontes, tema PMON)
+│   ├── components/
+│   │   ├── layout/
+│   │   │   ├── Sidebar.tsx
+│   │   │   ├── Header.tsx
+│   │   │   ├── ProjectCard.tsx
+│   │   │   └── ProjectTabs.tsx
+│   │   ├── ui/                      # botões, inputs — tema PMON (preto/branco/amarelo)
+│   │   └── charts/                  # componentes D3.js
+│   ├── lib/
+│   │   ├── supabase/                # client + helpers de auth
+│   │   └── api/                     # fetchers por módulo
+│   ├── hooks/
+│   ├── types/
+│   ├── public/
+│   │   └── logo/                    # espaço reservado para logo PMON (PNG/SVG)
+│   ├── styles/
+│   │   └── theme.ts                 # tokens: #0D0D0D, #F5C400, branco
+│   └── package.json
+│
+├── docs/
+│   └── referencia-projeto.md
+│
+└── README.md
+```
+
+---
+
 *Este documento é vivo — deve ser atualizado a cada decisão relevante de arquitetura ou escopo.*

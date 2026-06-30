@@ -1,0 +1,5 @@
+# Dependências do backend (versões a definir)
+fastapi
+uvicorn
+mpxj
+supabase
