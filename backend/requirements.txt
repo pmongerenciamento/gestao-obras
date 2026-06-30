@@ -1,5 +1,14 @@
-# Dependências do backend (versões a definir)
-fastapi
-uvicorn
-mpxj
-supabase
+# Dependências do backend — versões fixadas (pin) em 2026-06-30
+# Requer Java 11+ instalado no ambiente (ver nota no README) — máquina atual tem Java 8,
+# precisa de upgrade antes de instalar mpxj/JPype1.
+
+fastapi==0.138.2
+uvicorn[standard]==0.49.0
+python-multipart==0.0.32   # obrigatório para FastAPI aceitar UploadFile (multipart/form-data)
+pydantic-settings==2.14.2
+
+mpxj==16.4.1                # wrapper Python da lib Java MPXJ (leitura de .mpp/.xml/.xer)
+JPype1==1.7.1                # ponte Java<->Python usada pelo mpxj
+
+asyncpg==0.31.0              # conexão direta ao Postgres do Supabase p/ bulk insert via COPY
+supabase==2.31.0             # Supabase Storage (arquivo .mpp original) e validação de Auth
