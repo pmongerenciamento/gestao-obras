@@ -16,3 +16,7 @@ out/
 
 # Diversos
 .DS_Store
+
+# Arquivos .mpp reais usados como fixture de teste (podem conter dados de cliente)
+backend/tests/fixtures/*.mpp
+!backend/tests/fixtures/.gitkeep
