@@ -115,6 +115,35 @@ def map_dependencies(project: Any, project_id: UUID) -> list[tuple]:
     return rows
 
 
+def map_task_progress_by_ms_uid(project: Any) -> list[tuple]:
+    """ProjectFile -> tuplas chaveadas por ms_uid (não por task_id):
+    (ms_uid, planned_start, planned_finish, forecast_start, forecast_finish,
+    actual_start, actual_finish, percent_complete)
+
+    Usada quando ainda não existe um task_id no banco para a task (ex: task
+    nova de uma mudança estrutural ainda não confirmada). map_task_progress
+    é a versão que já traduz para task_id, usada nos casos em que a task já
+    foi inserida.
+
+    planned_start/planned_finish vêm do Baseline Start/Finish do MS Project
+    (sem fallback — ver docstring do módulo).
+    """
+    rows = []
+    for task in _real_tasks(project):
+        percent = task.getPercentageComplete()
+        rows.append((
+            int(task.getUniqueID()),
+            _to_date(task.getBaselineStart()),
+            _to_date(task.getBaselineFinish()),
+            _to_date(task.getStart()),
+            _to_date(task.getFinish()),
+            _to_date(task.getActualStart()),
+            _to_date(task.getActualFinish()),
+            float(percent) if percent is not None else None,
+        ))
+    return rows
+
+
 def map_task_progress(
     project: Any, snapshot_id: UUID, task_id_map: dict[int, UUID]
 ) -> list[tuple]:
@@ -125,27 +154,30 @@ def map_task_progress(
     task_id_map vem de fetch_task_id_map() (ms_uid -> id), chamado depois de
     bulk_insert_tasks — COPY não faz RETURNING, então os ids têm que ser
     buscados antes de montar essas tuplas.
-
-    planned_start/planned_finish vêm do Baseline Start/Finish do MS Project
-    (sem fallback — ver docstring do módulo).
     """
     rows = []
-    for task in _real_tasks(project):
-        ms_uid = int(task.getUniqueID())
+    for ms_uid, *progress_fields in map_task_progress_by_ms_uid(project):
         task_id = task_id_map.get(ms_uid)
         if task_id is None:
             continue  # tarefa não inserida (ex: filtrada em map_tasks)
-
-        percent = task.getPercentageComplete()
-        rows.append((
-            snapshot_id,
-            task_id,
-            _to_date(task.getBaselineStart()),
-            _to_date(task.getBaselineFinish()),
-            _to_date(task.getStart()),
-            _to_date(task.getFinish()),
-            _to_date(task.getActualStart()),
-            _to_date(task.getActualFinish()),
-            float(percent) if percent is not None else None,
-        ))
+        rows.append((snapshot_id, task_id, *progress_fields))
     return rows
+
+
+def get_project_guid(project: Any) -> str | None:
+    """GUID interno do MS Project (ProjectProperties.getGUID()) — identificador
+    estável entre exportações, ao contrário do nome (editável pelo usuário).
+    Usado por domain/snapshots para achar o projeto já existente no banco.
+    """
+    guid = project.getProjectProperties().getGUID()
+    return str(guid) if guid is not None else None
+
+
+def get_project_name(project: Any, fallback: str) -> str:
+    """Nome do projeto — usa o Title do MS Project (ProjectProperties.getName())
+    quando preenchido; a maioria dos arquivos reais não tem esse campo
+    preenchido (usuário nunca abriu File > Info > Properties), então cai
+    para `fallback` (ex: nome do arquivo enviado).
+    """
+    name = project.getProjectProperties().getName()
+    return str(name) if name else fallback
