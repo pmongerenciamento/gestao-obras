@@ -11,4 +11,4 @@ mpxj==16.4.1                # wrapper Python da lib Java MPXJ (leitura de .mpp/.
 JPype1==1.7.1                # ponte Java<->Python usada pelo mpxj
 
 asyncpg==0.31.0              # conexão direta ao Postgres do Supabase p/ bulk insert via COPY
-supabase==2.31.0             # Supabase Storage (arquivo .mpp original) e validação de Auth
+supabase==2.31.0             # Supabase Storage (arquivo .mpp original) e validação de Auth (instalado 2026-07-01)

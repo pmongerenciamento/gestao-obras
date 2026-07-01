@@ -81,7 +81,7 @@ async def process_import(
         project_name = get_project_name(project, fallback_name)
         snapshot_id = await _apply_initial_import(
             conn, owner_id, project_id, project_name, guid,
-            mapped_tasks, mapped_deps, project, reference_month,
+            mapped_tasks, mapped_deps, project, reference_month, file_url,
         )
         return ImportResult(ImportType.INITIAL, project_id, snapshot_id, None, None)
 
@@ -90,7 +90,7 @@ async def process_import(
     new_dep_keys = {(row[1], row[2], row[3]) for row in mapped_deps}
 
     if new_task_uids == existing_task_uids and new_dep_keys == existing_dep_keys:
-        snapshot_id = await _apply_monthly_update(conn, project_id, project, reference_month)
+        snapshot_id = await _apply_monthly_update(conn, project_id, project, reference_month, file_url)
         return ImportResult(ImportType.MONTHLY_UPDATE, project_id, snapshot_id, None, None)
 
     diff_summary = _diff_summary(new_task_uids, existing_task_uids, new_dep_keys, existing_dep_keys)
@@ -144,6 +144,7 @@ async def _apply_initial_import(
     mapped_deps: list[tuple],
     project: Any,
     reference_month: date,
+    file_url: str | None,
 ) -> UUID:
     await conn.execute(
         "insert into projects (id, name, owner_id, ms_project_guid) values ($1, $2, $3, $4)",
@@ -153,9 +154,9 @@ async def _apply_initial_import(
     await bulk_insert_dependencies(conn, mapped_deps)
 
     snapshot_id = await conn.fetchval(
-        "insert into snapshots (project_id, reference_month, is_baseline) "
-        "values ($1, $2, true) returning id",
-        project_id, reference_month,
+        "insert into snapshots (project_id, reference_month, is_baseline, file_url) "
+        "values ($1, $2, true, $3) returning id",
+        project_id, reference_month, file_url,
     )
     task_id_map = await fetch_task_id_map(conn, project_id)
     progress = map_task_progress(project, snapshot_id, task_id_map)
@@ -164,12 +165,16 @@ async def _apply_initial_import(
 
 
 async def _apply_monthly_update(
-    conn: asyncpg.connection.Connection, project_id: UUID, project: Any, reference_month: date,
+    conn: asyncpg.connection.Connection,
+    project_id: UUID,
+    project: Any,
+    reference_month: date,
+    file_url: str | None,
 ) -> UUID:
     snapshot_id = await conn.fetchval(
-        "insert into snapshots (project_id, reference_month, is_baseline) "
-        "values ($1, $2, false) returning id",
-        project_id, reference_month,
+        "insert into snapshots (project_id, reference_month, is_baseline, file_url) "
+        "values ($1, $2, false, $3) returning id",
+        project_id, reference_month, file_url,
     )
     task_id_map = await fetch_task_id_map(conn, project_id)
     progress = map_task_progress(project, snapshot_id, task_id_map)
