@@ -11,7 +11,7 @@ export default function LoginPage() {
         <Image
           src="/logo/LOGO_PMON.png"
           alt="PMON"
-          width={160}
+          width={64}
           height={64}
           priority
           className="mx-auto mb-8 h-16 w-auto"

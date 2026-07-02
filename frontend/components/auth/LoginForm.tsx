@@ -52,7 +52,7 @@ export function LoginForm() {
         onChange={(e) => setPassword(e.target.value)}
       />
       {error && <p className="text-sm text-red-500">{error}</p>}
-      <Button type="submit" isLoading={loading}>
+      <Button type="submit" isLoading={loading} className="w-full">
         {loading ? "Entrando..." : "ENTRAR"}
       </Button>
       <span className="cursor-not-allowed text-center text-sm text-white/50">

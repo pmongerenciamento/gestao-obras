@@ -8,7 +8,7 @@ export function Button({ isLoading, disabled, children, className = "", ...props
   return (
     <button
       disabled={disabled || isLoading}
-      className={`w-full rounded-md bg-pmon-yellow px-4 py-2 font-semibold text-pmon-black transition-colors hover:bg-pmon-yellow/90 disabled:cursor-not-allowed disabled:opacity-60 ${className}`}
+      className={`rounded-md bg-pmon-yellow px-4 py-2 font-semibold text-pmon-black transition-colors hover:bg-pmon-yellow/90 disabled:cursor-not-allowed disabled:opacity-60 ${className}`}
       {...props}
     >
       {children}

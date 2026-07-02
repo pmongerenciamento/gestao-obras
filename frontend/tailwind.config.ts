@@ -12,6 +12,7 @@ const config: Config = {
           black: "#0D0D0D",
           yellow: "#F5C400",
           white: "#FFFFFF",
+          bg: "#F4F4F4",
         },
       },
     },
