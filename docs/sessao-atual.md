@@ -1,4 +1,4 @@
-# Estado Atual do Projeto — 2026-07-01
+# Estado Atual do Projeto — 2026-07-02
 
 1. Backend em Python/FastAPI, ambiente validado: Java 17 (Temurin), Python 3.14, venv local em `backend/.venv` (gitignorado).
    - **Ambiente de desenvolvimento**: o usuário roda o Claude Code via **CMD do Windows**, não pelo terminal integrado do VS Code — relevante para instruções/comandos sugeridos em sessões futuras (o usuário abre um CMD à parte, não a aba de terminal dentro do VS Code).
@@ -38,4 +38,24 @@
 12. **Backend 100% concluído** (confirmado pelo usuário em 2026-07-01: item 7 era o último item do backend antes do frontend). Todos os commits do backend desta sessão: `4a78b17`, `240ab47`, `6b30262`, `31503c0`, `92e562b`.
 13. **Pendências de segurança antes de produção** (nenhuma bloqueia o desenvolvimento, mas precisam ser feitas antes de ir pra produção): resetar a senha do banco (`DATABASE_URL`) e rotacionar `SUPABASE_SERVICE_ROLE_KEY`/`SUPABASE_SECRET_KEY` — todas apareceram em texto puro no chat em algum momento desta sessão (Project Settings → Database / → API no painel do Supabase).
 14. **Pendência para a próxima sessão**: o usuário precisa providenciar o **logo PMON** (PNG ou SVG) — necessário para a tela de login e a sidebar do frontend (`frontend/public/logo/`, já reservado na estrutura de pastas do `docs/referencia-projeto.md`).
-15. **Frontend ainda não iniciado**: a pasta `frontend/` existe com a estrutura de pastas esqueleto (`app/`, `components/`, `hooks/`, `lib/`, `public/`, `styles/`, `types/`) e um `package.json` mínimo (só `name`/`version`/`private`, sem dependências) e um `.env.local` já presente — mas **`npm install` nunca foi rodado** (`node_modules/` não existe) e nenhum código de fato foi escrito ainda. Próxima sessão começa do zero no frontend (Next.js + TypeScript + Tailwind, conforme `docs/referencia-projeto.md`).
+15. **Frontend ainda não iniciado** (situação no fim da sessão de 2026-07-01): a pasta `frontend/` existia com a estrutura de pastas esqueleto e um `package.json` mínimo sem dependências — `npm install` nunca tinha sido rodado, nenhum código escrito.
+
+## Sessão 2026-07-02 — Frontend: scaffold + tela de login
+
+16. Logo PMON adicionado pelo usuário em `frontend/public/logo/LOGO_PMON.png`.
+17. **Scaffold do Next.js montado manualmente** (sem `create-next-app`, pra não sobrescrever a estrutura de pastas já reservada em `docs/referencia-projeto.md`): `package.json` (Next 15 + React 19 + TypeScript + Tailwind 3 + `@supabase/supabase-js`/`@supabase/ssr` + `d3`), `tsconfig.json`, `next.config.ts`, `tailwind.config.ts` (tokens `pmon.black #0D0D0D` / `pmon.yellow #F5C400` / `pmon.white`), `postcss.config.mjs`, `eslint.config.mjs` (flat config, ignora `.next/**` e `next-env.d.ts` — sem isso o lint rodava em cima do build gerado). `npm install` executado com sucesso (436 pacotes). 2 vulnerabilidades moderadas (XSS no `postcss` transitivo do Next 15.5.20) — não corrigidas, o fix automático faria downgrade quebrado pro Next 9.
+18. **Tela de login implementada** (plano completo em `C:\Users\pmon_admin\.claude\plans\adaptive-crafting-popcorn.md`):
+    - `lib/supabase/client.ts` / `server.ts`: `createBrowserClient`/`createServerClient` via `@supabase/ssr`, usando `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (formato novo `sb_publishable_...`) em vez da `NEXT_PUBLIC_SUPABASE_ANON_KEY` legada — decisão do usuário, ambas as chaves existem no `.env.local`.
+    - `middleware.ts` (raiz de `frontend/`, não estava na estrutura original do `docs/referencia-projeto.md` — peça necessária pra separação `(auth)`/`(app)` funcionar): sem sessão fora de `/login` → redireciona pra `/login`; com sessão em `/login` → redireciona pra `/`.
+    - `components/ui/Button.tsx` e `Input.tsx`: primitivos reutilizáveis com tema PMON (primeira peça da pasta `components/ui/` reservada na estrutura do projeto).
+    - `components/auth/LoginForm.tsx` (pasta nova, não prevista na estrutura original): Client Component, chama `supabase.auth.signInWithPassword`.
+    - `app/(auth)/login/page.tsx`: stub substituído pela tela real (logo + form, fundo `pmon-black`).
+    - "Esqueceu a senha?" fica como placeholder visual (decisão do usuário) — sem fluxo funcional ainda.
+19. **Bug encontrado durante o teste real com o usuário**: `app/(app)/layout.tsx` e `app/(app)/page.tsx` eram stubs sem `export default` → após login bem-sucedido (redirect pra `/`), o Next quebrava com `"The default export is not a React Component"`. Corrigido com stub mínimo — decisão do usuário foi ir com stub mínimo agora em vez de planejar o painel completo nesta etapa:
+    - `(app)/layout.tsx`: só renderiza `{children}` num `div` com fundo `pmon-black`.
+    - `(app)/page.tsx`: texto placeholder "Painel principal — em construção."
+    - `Sidebar.tsx`/`Header.tsx` (`components/layout/`) continuam stub — Sidebar/Header/cards de projeto ficam pra uma próxima etapa planejada.
+    - **Nota**: `app/(app)/projetos/[projectId]/*` (6 páginas + layout) continuam stub sem `export default` — só vão quebrar quando alguém navegar pra dentro de um projeto específico; ainda não acontece nesta etapa.
+20. **Validado com usuário de teste real e persistente** no Supabase Auth (`diego@pmongerenciamento.com.br`, criado pelo próprio usuário no painel do Supabase — diferente do usuário efêmero criado/apagado dentro de transação na sessão de validação do backend). Usuário testou visualmente no navegador: login com credenciais reais funcionou, redirecionamento pra `/` confirmado, middleware protegendo a área autenticada confirmado.
+21. Commit `e2af5ce`: "Implementa tela de login PMON: autenticação Supabase, middleware de proteção de rotas e identidade visual (preto/amarelo/branco)".
+22. **Próximo passo sugerido**: implementar o painel principal de verdade (`Sidebar`, `Header` com logout, cards de projeto + "+ Novo Projeto"), depois o módulo de importação no frontend (tela de upload consumindo `POST /api/v1/upload`, já pronto no backend).
