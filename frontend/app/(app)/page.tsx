@@ -1,7 +1,7 @@
+import Link from "next/link";
 import { Header } from "@/components/layout/Header";
 import { ProjectCard } from "@/components/layout/ProjectCard";
 import { AdminBar } from "@/components/layout/AdminBar";
-import { Button } from "@/components/ui/Button";
 import { listProjects } from "@/lib/api/projects";
 import { isMasterUser } from "@/lib/auth/roles";
 import { createClient } from "@/lib/supabase/server";
@@ -27,13 +27,24 @@ export default async function DashboardPage() {
       <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col px-6 py-8">
         <div className="mb-6 flex items-center justify-between">
           <h1 className="text-xl font-semibold text-black">Projetos</h1>
-          <Button className="cursor-not-allowed">Novo projeto</Button>
+          <Link
+            href="/projetos/novo"
+            className="rounded-md bg-pmon-yellow px-4 py-2 font-semibold text-pmon-black transition-colors hover:bg-pmon-yellow/90"
+          >
+            Novo projeto
+          </Link>
         </div>
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {projects.map((project) => (
-            <ProjectCard key={project.id} project={project} />
-          ))}
-        </div>
+        {projects.length === 0 ? (
+          <p className="text-sm text-black/50">
+            Nenhum projeto ainda. Clique em &quot;Novo projeto&quot; pra começar.
+          </p>
+        ) : (
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {projects.map((project) => (
+              <ProjectCard key={project.id} project={project} />
+            ))}
+          </div>
+        )}
         {isMasterUser(user?.email) && <AdminBar />}
       </main>
     </div>
