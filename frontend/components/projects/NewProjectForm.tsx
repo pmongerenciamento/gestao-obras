@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useForm } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Input } from "@/components/ui/Input";
@@ -17,6 +17,7 @@ import {
   type TipologiaConstrutiva,
 } from "@/types/project";
 import { createProject, uploadProjectImage } from "@/lib/api/create-project";
+import { parseDigits, formatThousands, formatCurrencyBRL } from "@/lib/format-number";
 
 const tipologiaObraValues = TIPOLOGIA_OBRA_OPTIONS.map((o) => o.value) as [
   TipologiaObra,
@@ -47,8 +48,8 @@ const formSchema = z
     numPavimentos: optionalInt,
     numUnidades: optionalInt,
     numLotes: optionalInt,
-    areaConstruida: optionalNumber,
-    areaPrivativa: optionalNumber,
+    areaConstruida: optionalInt,
+    areaPrivativa: optionalInt,
     orcamento: optionalNumber,
     dataBaseOrcamento: optionalString,
     prazoEstimadoMeses: optionalInt,
@@ -91,6 +92,7 @@ export function NewProjectForm() {
 
   const {
     register,
+    control,
     handleSubmit,
     watch,
     formState: { errors },
@@ -251,37 +253,72 @@ export function NewProjectForm() {
           />
         )}
         <div className="grid grid-cols-2 gap-4">
-          <Input
-            id="areaConstruida"
-            label="Área construída (m²)"
-            type="number"
-            step="0.01"
-            variant="light"
-            error={errors.areaConstruida?.message}
-            {...register("areaConstruida")}
+          <Controller
+            control={control}
+            name="areaConstruida"
+            render={({ field }) => (
+              <Input
+                id="areaConstruida"
+                label="Área construída (m²)"
+                type="text"
+                inputMode="numeric"
+                variant="light"
+                error={errors.areaConstruida?.message}
+                value={field.value ? formatThousands(String(field.value)) : ""}
+                onChange={(e) => {
+                  const digits = parseDigits(e.target.value);
+                  field.onChange(digits ? Number(digits) : undefined);
+                }}
+                onBlur={field.onBlur}
+              />
+            )}
           />
-          <Input
-            id="areaPrivativa"
-            label="Área privativa (m²)"
-            type="number"
-            step="0.01"
-            variant="light"
-            error={errors.areaPrivativa?.message}
-            {...register("areaPrivativa")}
+          <Controller
+            control={control}
+            name="areaPrivativa"
+            render={({ field }) => (
+              <Input
+                id="areaPrivativa"
+                label="Área privativa (m²)"
+                type="text"
+                inputMode="numeric"
+                variant="light"
+                error={errors.areaPrivativa?.message}
+                value={field.value ? formatThousands(String(field.value)) : ""}
+                onChange={(e) => {
+                  const digits = parseDigits(e.target.value);
+                  field.onChange(digits ? Number(digits) : undefined);
+                }}
+                onBlur={field.onBlur}
+              />
+            )}
           />
         </div>
       </section>
 
       <section className="flex flex-col gap-4">
         <h2 className="text-sm font-semibold text-black/70">Orçamento e prazo</h2>
-        <Input
-          id="orcamento"
-          label="Orçamento (R$)"
-          type="number"
-          step="0.01"
-          variant="light"
-          error={errors.orcamento?.message}
-          {...register("orcamento")}
+        <Controller
+          control={control}
+          name="orcamento"
+          render={({ field }) => (
+            <Input
+              id="orcamento"
+              label="Orçamento (R$)"
+              type="text"
+              inputMode="numeric"
+              variant="light"
+              error={errors.orcamento?.message}
+              value={
+                field.value ? formatCurrencyBRL(String(Math.round(Number(field.value) * 100))) : ""
+              }
+              onChange={(e) => {
+                const digitsCents = parseDigits(e.target.value);
+                field.onChange(digitsCents ? Number(digitsCents) / 100 : undefined);
+              }}
+              onBlur={field.onBlur}
+            />
+          )}
         />
         <div className="grid grid-cols-2 gap-4">
           <Input
