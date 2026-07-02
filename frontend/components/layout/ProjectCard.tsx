@@ -28,7 +28,7 @@ export function ProjectCard({ project }: { project: ProjectSummary }) {
       href={`/projetos/${project.id}`}
       className="block overflow-hidden rounded-lg border border-black/10 bg-white shadow-sm transition-colors transition-shadow hover:border-pmon-yellow hover:shadow-md"
     >
-      <div className="relative h-36 w-full bg-black/5">
+      <div className="relative h-[160px] w-full bg-black/5">
         {project.imageUrl ? (
           <Image src={project.imageUrl} alt={project.name} fill className="object-cover" />
         ) : (
