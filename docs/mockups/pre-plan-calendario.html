@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Mockup — Pré-planejamento: Calendário</title>
+<style>
+  :root {
+    --pmon-black: #0D0D0D;
+    --pmon-yellow: #F5C400;
+    --pmon-bg: #F4F4F4;
+    --gray: #E5E5E5;
+    --orange: #FF9F43;
+    --blue: #4A90D9;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
+    background: var(--pmon-bg);
+    color: var(--pmon-black);
+  }
+  header {
+    background: var(--pmon-black);
+    color: white;
+    padding: 16px 24px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  header .logo {
+    width: 28px; height: 28px;
+    background: var(--pmon-yellow);
+    border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; color: var(--pmon-black); font-size: 13px;
+  }
+  header h1 { font-size: 15px; margin: 0; font-weight: 500; }
+  header .crumb { opacity: .6; }
+
+  .tabs {
+    display: flex; gap: 4px;
+    padding: 0 24px;
+    background: white;
+    border-bottom: 1px solid #ddd;
+  }
+  .tabs .tab {
+    padding: 12px 16px;
+    font-size: 14px;
+    color: #666;
+    border-bottom: 2px solid transparent;
+    cursor: default;
+  }
+  .tabs .tab.active {
+    color: var(--pmon-black);
+    font-weight: 600;
+    border-bottom-color: var(--pmon-yellow);
+  }
+
+  main {
+    padding: 24px;
+    display: grid;
+    grid-template-columns: 340px 1fr;
+    gap: 24px;
+    align-items: start;
+  }
+
+  .card {
+    background: white;
+    border-radius: 10px;
+    border: 1px solid #e2e2e2;
+    padding: 18px;
+  }
+  .card h2 {
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    color: #888;
+    margin: 0 0 14px;
+  }
+
+  /* Mini calendário */
+  .cal-month-label {
+    font-size: 15px;
+    font-weight: 600;
+    margin-bottom: 10px;
+    text-transform: capitalize;
+  }
+  .cal-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 4px;
+  }
+  .cal-grid .dow {
+    text-align: center;
+    font-size: 11px;
+    color: #999;
+    padding-bottom: 4px;
+  }
+  .cal-day {
+    aspect-ratio: 1;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 6px;
+    font-size: 12px;
+    background: #f7f7f7;
+    color: #333;
+  }
+  .cal-day.empty { background: none; }
+  .cal-day.weekend { background: var(--gray); color: #777; }
+  .cal-day.national { background: var(--orange); color: white; font-weight: 600; }
+  .cal-day.custom { background: var(--blue); color: white; font-weight: 600; }
+
+  .legend {
+    margin-top: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    font-size: 12px;
+    color: #555;
+  }
+  .legend .item { display: flex; align-items: center; gap: 8px; }
+  .legend .swatch { width: 14px; height: 14px; border-radius: 4px; flex-shrink: 0; }
+  .swatch.weekend { background: var(--gray); }
+  .swatch.national { background: var(--orange); }
+  .swatch.custom { background: var(--blue); }
+
+  /* Listas de feriados */
+  .holiday-section + .holiday-section { margin-top: 20px; }
+  .holiday-list { display: flex; flex-direction: column; gap: 6px; }
+  .holiday-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 12px;
+    border-radius: 8px;
+    background: #fafafa;
+    border: 1px solid #eee;
+    font-size: 13px;
+  }
+  .holiday-row .date { font-variant-numeric: tabular-nums; color: #666; width: 78px; flex-shrink: 0; }
+  .holiday-row .desc { flex: 1; }
+  .holiday-row .badge-lock { color: #aaa; font-size: 14px; }
+  .holiday-row .remove-btn {
+    border: none; background: none; color: #bbb; cursor: default;
+    font-size: 16px; line-height: 1; padding: 2px 6px; border-radius: 4px;
+  }
+  .holiday-row.custom { background: #eef5fc; border-color: #d6e8f7; }
+
+  .add-form {
+    margin-top: 18px;
+    display: flex;
+    gap: 8px;
+    align-items: flex-end;
+  }
+  .add-form .field { display: flex; flex-direction: column; gap: 4px; }
+  .add-form label { font-size: 11px; color: #777; }
+  .add-form input {
+    border: 1px solid #ccc; border-radius: 6px; padding: 7px 9px; font-size: 13px;
+  }
+  .add-form .desc-field { flex: 1; }
+  .add-form button {
+    background: var(--pmon-yellow); color: var(--pmon-black);
+    border: none; border-radius: 6px; padding: 8px 16px;
+    font-size: 13px; font-weight: 600; cursor: default;
+    white-space: nowrap;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">PM</div>
+  <h1>Projetos <span class="crumb">›</span> Residencial Aurora <span class="crumb">›</span> Pré-planejamento <span class="crumb">›</span> Cenário A</h1>
+</header>
+
+<div class="tabs">
+  <div class="tab active">Calendário</div>
+  <div class="tab">Serviços e lotes</div>
+  <div class="tab">Linha de balanço</div>
+</div>
+
+<main>
+  <div class="card">
+    <h2>Visão do mês</h2>
+    <div class="cal-month-label">Março de 2026</div>
+    <div class="cal-grid">
+      <div class="dow">S</div><div class="dow">T</div><div class="dow">Q</div><div class="dow">Q</div><div class="dow">S</div><div class="dow">S</div><div class="dow">D</div>
+      <div class="cal-day empty"></div><div class="cal-day empty"></div>
+      <div class="cal-day">1</div><div class="cal-day">2</div><div class="cal-day">3</div>
+      <div class="cal-day weekend">4</div><div class="cal-day weekend">5</div>
+      <div class="cal-day">6</div><div class="cal-day">7</div><div class="cal-day">8</div><div class="cal-day">9</div><div class="cal-day">10</div>
+      <div class="cal-day weekend">11</div><div class="cal-day weekend">12</div>
+      <div class="cal-day">13</div><div class="cal-day">14</div><div class="cal-day national">15</div><div class="cal-day">16</div><div class="cal-day">17</div>
+      <div class="cal-day weekend">18</div><div class="cal-day weekend">19</div>
+      <div class="cal-day">20</div><div class="cal-day">21</div><div class="cal-day">22</div><div class="cal-day">23</div><div class="cal-day custom">24</div>
+      <div class="cal-day weekend">25</div><div class="cal-day weekend">26</div>
+      <div class="cal-day">27</div><div class="cal-day">28</div><div class="cal-day">29</div><div class="cal-day">30</div><div class="cal-day">31</div>
+    </div>
+
+    <div class="legend">
+      <div class="item"><span class="swatch weekend"></span> Fim de semana</div>
+      <div class="item"><span class="swatch national"></span> Feriado nacional</div>
+      <div class="item"><span class="swatch custom"></span> Feriado personalizado</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="holiday-section">
+      <h2>Feriados nacionais (pré-cadastrados)</h2>
+      <div class="holiday-list">
+        <div class="holiday-row"><span class="date">01/01/2026</span><span class="desc">Confraternização Universal</span><span class="badge-lock">🔒</span></div>
+        <div class="holiday-row"><span class="date">17/02/2026</span><span class="desc">Carnaval</span><span class="badge-lock">🔒</span></div>
+        <div class="holiday-row"><span class="date">03/04/2026</span><span class="desc">Sexta-feira Santa</span><span class="badge-lock">🔒</span></div>
+        <div class="holiday-row"><span class="date">21/04/2026</span><span class="desc">Tiradentes</span><span class="badge-lock">🔒</span></div>
+        <div class="holiday-row"><span class="date">01/05/2026</span><span class="desc">Dia do Trabalho</span><span class="badge-lock">🔒</span></div>
+      </div>
+    </div>
+
+    <div class="holiday-section">
+      <h2>Feriados personalizados</h2>
+      <div class="holiday-list">
+        <div class="holiday-row custom"><span class="date">24/03/2026</span><span class="desc">Recesso da construtora</span><button class="remove-btn">✕</button></div>
+        <div class="holiday-row custom"><span class="date">30/06/2026</span><span class="desc">Aniversário da empresa</span><button class="remove-btn">✕</button></div>
+      </div>
+
+      <div class="add-form">
+        <div class="field">
+          <label>Data</label>
+          <input type="text" value="dd/mm/aaaa" readonly>
+        </div>
+        <div class="field desc-field">
+          <label>Descrição</label>
+          <input type="text" placeholder="Ex.: Recesso interno" readonly>
+        </div>
+        <button>Adicionar</button>
+      </div>
+    </div>
+  </div>
+</main>
+
+</body>
+</html>

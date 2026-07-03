@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Mockup — Pré-planejamento: Serviços e lotes</title>
+<style>
+  :root {
+    --pmon-black: #0D0D0D;
+    --pmon-yellow: #F5C400;
+    --pmon-bg: #F4F4F4;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
+    background: var(--pmon-bg);
+    color: var(--pmon-black);
+  }
+  header {
+    background: var(--pmon-black);
+    color: white;
+    padding: 16px 24px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  header .logo {
+    width: 28px; height: 28px;
+    background: var(--pmon-yellow);
+    border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; color: var(--pmon-black); font-size: 13px;
+  }
+  header h1 { font-size: 15px; margin: 0; font-weight: 500; }
+  header .crumb { opacity: .6; }
+
+  .tabs {
+    display: flex; gap: 4px;
+    padding: 0 24px;
+    background: white;
+    border-bottom: 1px solid #ddd;
+  }
+  .tabs .tab {
+    padding: 12px 16px;
+    font-size: 14px;
+    color: #666;
+    border-bottom: 2px solid transparent;
+  }
+  .tabs .tab.active {
+    color: var(--pmon-black);
+    font-weight: 600;
+    border-bottom-color: var(--pmon-yellow);
+  }
+
+  main { padding: 24px; }
+
+  .toolbar {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+  .toolbar button {
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    padding: 8px 14px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--pmon-black);
+    cursor: default;
+  }
+  .toolbar .hint {
+    align-self: center;
+    font-size: 12px;
+    color: #999;
+    margin-left: 4px;
+  }
+
+  .grid-wrap {
+    background: white;
+    border-radius: 10px;
+    border: 1px solid #e2e2e2;
+    overflow-x: auto;
+  }
+  table { border-collapse: collapse; font-size: 13px; }
+
+  th, td { border-bottom: 1px solid #eee; border-right: 1px solid #eee; }
+
+  /* Coluna grupo (rowspan, label vertical) */
+  td.group-cell {
+    width: 34px;
+    padding: 0;
+    text-align: center;
+    position: sticky; left: 0; z-index: 3;
+  }
+  .group-label {
+    writing-mode: vertical-rl;
+    transform: rotate(180deg);
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .06em;
+    color: white;
+    padding: 8px 0;
+  }
+  .group-a .group-label { background: #E07A3F; }
+  .group-b .group-label { background: #3F7BE0; }
+
+  /* Coluna pavimento sticky */
+  th.floor-head, td.floor-cell {
+    position: sticky; left: 34px; z-index: 2;
+    background: white;
+    min-width: 140px;
+    padding: 10px 12px;
+    text-align: left;
+    font-weight: 500;
+  }
+  th.floor-head { background: #fafafa; z-index: 4; color: #888; font-size: 11px; text-transform: uppercase; }
+
+  /* Cabeçalho de serviço */
+  th.service-head {
+    min-width: 150px;
+    padding: 10px 12px;
+    text-align: left;
+    vertical-align: top;
+  }
+  .service-title { display: flex; align-items: center; gap: 6px; font-weight: 600; margin-bottom: 8px; }
+  .service-title .swatch { width: 12px; height: 12px; border-radius: 3px; flex-shrink: 0; }
+  .service-default { display: flex; gap: 4px; align-items: center; }
+  .service-default input {
+    width: 44px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    padding: 4px 6px;
+    font-size: 12px;
+    text-align: center;
+  }
+  .apply-btn {
+    border: 1px solid #ddd;
+    background: #fafafa;
+    border-radius: 5px;
+    padding: 4px 8px;
+    font-size: 11px;
+    color: #555;
+    white-space: nowrap;
+  }
+
+  td.cycle-cell { padding: 6px 10px; }
+  td.cycle-cell input {
+    width: 48px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    padding: 5px 6px;
+    font-size: 13px;
+    text-align: center;
+    /* sem spinner */
+    -moz-appearance: textfield;
+    appearance: textfield;
+  }
+  td.cycle-cell input::-webkit-outer-spin-button,
+  td.cycle-cell input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  td.cycle-cell input:focus {
+    outline: 2px solid var(--pmon-yellow);
+    outline-offset: 0;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">PM</div>
+  <h1>Projetos <span class="crumb">›</span> Residencial Aurora <span class="crumb">›</span> Pré-planejamento <span class="crumb">›</span> Cenário A</h1>
+</header>
+
+<div class="tabs">
+  <div class="tab">Calendário</div>
+  <div class="tab active">Serviços e lotes</div>
+  <div class="tab">Linha de balanço</div>
+</div>
+
+<main>
+  <div class="toolbar">
+    <button>+ Grupo</button>
+    <button>+ Pavimento</button>
+    <button>+ Serviço</button>
+    <span class="hint">"+ Pavimento" aceita vários nomes separados por ; · navegue pelas células com Tab / Enter</span>
+  </div>
+
+  <div class="grid-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th class="floor-head" style="position:sticky; left:0; z-index:5;"></th>
+          <th class="floor-head">Pavimento</th>
+          <th class="service-head">
+            <div class="service-title"><span class="swatch" style="background:#F5C400"></span>Alvenaria</div>
+            <div class="service-default">
+              Padrão: <input type="text" value="5"> <button class="apply-btn">Aplicar ▾</button>
+            </div>
+          </th>
+          <th class="service-head">
+            <div class="service-title"><span class="swatch" style="background:#4CAF7D"></span>Reboco</div>
+            <div class="service-default">
+              Padrão: <input type="text" value="4"> <button class="apply-btn">Aplicar ▾</button>
+            </div>
+          </th>
+          <th class="service-head">
+            <div class="service-title"><span class="swatch" style="background:#9B6BD9"></span>Pintura</div>
+            <div class="service-default">
+              Padrão: <input type="text" value="3"> <button class="apply-btn">Aplicar ▾</button>
+            </div>
+          </th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="group-cell group-a" rowspan="3"><div class="group-label">TORRE A</div></td>
+          <td class="floor-cell">Térreo</td>
+          <td class="cycle-cell"><input type="text" value="5"></td>
+          <td class="cycle-cell"><input type="text" value="4"></td>
+          <td class="cycle-cell"><input type="text" value=""></td>
+        </tr>
+        <tr>
+          <td class="floor-cell">1º Pavimento</td>
+          <td class="cycle-cell"><input type="text" value="5"></td>
+          <td class="cycle-cell"><input type="text" value="4"></td>
+          <td class="cycle-cell"><input type="text" value="3"></td>
+        </tr>
+        <tr>
+          <td class="floor-cell">2º Pavimento</td>
+          <td class="cycle-cell"><input type="text" value="5"></td>
+          <td class="cycle-cell"><input type="text" value=""></td>
+          <td class="cycle-cell"><input type="text" value="3"></td>
+        </tr>
+        <tr>
+          <td class="group-cell group-b" rowspan="2"><div class="group-label">TORRE B</div></td>
+          <td class="floor-cell">Térreo</td>
+          <td class="cycle-cell"><input type="text" value="4"></td>
+          <td class="cycle-cell"><input type="text" value=""></td>
+          <td class="cycle-cell"><input type="text" value=""></td>
+        </tr>
+        <tr>
+          <td class="floor-cell">1º Pavimento</td>
+          <td class="cycle-cell"><input type="text" value="4"></td>
+          <td class="cycle-cell"><input type="text" value=""></td>
+          <td class="cycle-cell"><input type="text" value=""></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</main>
+
+</body>
+</html>

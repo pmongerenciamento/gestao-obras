@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Mockup — Pré-planejamento: Linha de Balanço</title>
+<style>
+  :root {
+    --pmon-black: #0D0D0D;
+    --pmon-yellow: #F5C400;
+    --pmon-bg: #F4F4F4;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
+    background: var(--pmon-bg);
+    color: var(--pmon-black);
+  }
+  header {
+    background: var(--pmon-black);
+    color: white;
+    padding: 16px 24px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  header .logo {
+    width: 28px; height: 28px;
+    background: var(--pmon-yellow);
+    border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; color: var(--pmon-black); font-size: 13px;
+  }
+  header h1 { font-size: 15px; margin: 0; font-weight: 500; }
+  header .crumb { opacity: .6; }
+
+  .tabs {
+    display: flex; gap: 4px;
+    padding: 0 24px;
+    background: white;
+    border-bottom: 1px solid #ddd;
+  }
+  .tabs .tab {
+    padding: 12px 16px;
+    font-size: 14px;
+    color: #666;
+    border-bottom: 2px solid transparent;
+  }
+  .tabs .tab.active {
+    color: var(--pmon-black);
+    font-weight: 600;
+    border-bottom-color: var(--pmon-yellow);
+  }
+
+  main { padding: 24px; }
+
+  .legend {
+    display: flex;
+    gap: 18px;
+    margin-bottom: 12px;
+    font-size: 12px;
+    color: #555;
+  }
+  .legend .item { display: flex; align-items: center; gap: 6px; }
+  .legend .swatch { width: 12px; height: 12px; border-radius: 3px; }
+
+  .chart-wrap {
+    background: white;
+    border-radius: 10px;
+    border: 1px solid #e2e2e2;
+    overflow-x: auto;
+  }
+
+  .chart {
+    display: inline-grid;
+    grid-template-columns: 150px repeat(28, 30px);
+  }
+
+  .head-cell {
+    border-bottom: 1px solid #eee;
+    border-right: 1px solid #eee;
+    font-size: 11px;
+    text-align: center;
+    padding: 6px 2px;
+    background: white;
+  }
+  .head-corner { position: sticky; left: 0; z-index: 3; background: #fafafa; }
+  .head-month { grid-column: span 15; font-weight: 600; text-transform: capitalize; }
+  .head-month.apr { grid-column: span 13; }
+  .head-week { grid-column: span 7; color: #888; font-size: 10px; }
+  .head-day { color: #999; }
+  .head-day.weekend { background: #ececec; color: #aaa; }
+
+  .row-label {
+    position: sticky; left: 0; z-index: 2;
+    background: white;
+    border-right: 1px solid #eee;
+    border-bottom: 1px solid #f1f1f1;
+    padding: 0 12px;
+    display: flex; align-items: center;
+    font-size: 13px;
+    font-weight: 500;
+    min-height: 34px;
+  }
+
+  .group-divider {
+    grid-column: 1 / -1;
+    background: #FFF6DA;
+    border-bottom: 1px solid #F0DFA0;
+    border-top: 1px solid #F0DFA0;
+    padding: 5px 12px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .05em;
+    color: #7A5B00;
+    position: sticky; left: 0;
+  }
+
+  .day-bg {
+    border-right: 1px solid #f3f3f3;
+    border-bottom: 1px solid #f1f1f1;
+    min-height: 34px;
+  }
+  .day-bg.weekend { background: #ececec; }
+
+  .row {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: 150px repeat(28, 30px);
+    position: relative;
+  }
+  .row.tall { min-height: 68px; }
+
+  .bar {
+    position: absolute;
+    height: 24px;
+    border-radius: 4px;
+    top: 5px;
+    display: flex;
+    align-items: center;
+    padding: 0 6px;
+    font-size: 10px;
+    color: white;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+  }
+  .bar.sub2 { top: 35px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">PM</div>
+  <h1>Projetos <span class="crumb">›</span> Residencial Aurora <span class="crumb">›</span> Pré-planejamento <span class="crumb">›</span> Cenário A</h1>
+</header>
+
+<div class="tabs">
+  <div class="tab">Calendário</div>
+  <div class="tab">Serviços e lotes</div>
+  <div class="tab active">Linha de balanço</div>
+</div>
+
+<main>
+  <div class="legend">
+    <div class="item"><span class="swatch" style="background:#F5C400"></span> Alvenaria</div>
+    <div class="item"><span class="swatch" style="background:#4CAF7D"></span> Reboco</div>
+    <div class="item"><span class="swatch" style="background:#9B6BD9"></span> Pintura</div>
+    <div class="item"><span class="swatch" style="background:#ececec; border:1px solid #ddd;"></span> Fim de semana / feriado</div>
+  </div>
+
+  <div class="chart-wrap">
+    <div class="chart">
+      <!-- Cabeçalho: mês -->
+      <div class="head-cell head-corner"></div>
+      <div class="head-cell head-month">Março de 2026</div>
+      <div class="head-cell head-month apr">Abril de 2026</div>
+
+      <!-- Cabeçalho: semana -->
+      <div class="head-cell head-corner"></div>
+      <div class="head-cell head-week">09/03 - 15/03</div>
+      <div class="head-cell head-week">16/03 - 22/03</div>
+      <div class="head-cell head-week">23/03 - 29/03</div>
+      <div class="head-cell head-week">30/03 - 05/04</div>
+
+      <!-- Cabeçalho: letras dos dias -->
+      <div class="head-cell head-corner">Pavimento</div>
+      <div class="head-cell head-day">S</div><div class="head-cell head-day">T</div><div class="head-cell head-day">Q</div><div class="head-cell head-day">Q</div><div class="head-cell head-day">S</div><div class="head-cell head-day weekend">S</div><div class="head-cell head-day weekend">D</div>
+      <div class="head-cell head-day">S</div><div class="head-cell head-day">T</div><div class="head-cell head-day">Q</div><div class="head-cell head-day">Q</div><div class="head-cell head-day">S</div><div class="head-cell head-day weekend">S</div><div class="head-cell head-day weekend">D</div>
+      <div class="head-cell head-day">S</div><div class="head-cell head-day">T</div><div class="head-cell head-day">Q</div><div class="head-cell head-day">Q</div><div class="head-cell head-day">S</div><div class="head-cell head-day weekend">S</div><div class="head-cell head-day weekend">D</div>
+      <div class="head-cell head-day">S</div><div class="head-cell head-day">T</div><div class="head-cell head-day">Q</div><div class="head-cell head-day">Q</div><div class="head-cell head-day">S</div><div class="head-cell head-day weekend">S</div><div class="head-cell head-day weekend">D</div>
+
+      <!-- TORRE A — pavimentos de baixo pra cima: 2º Pav (topo do grupo) ... Térreo (base do grupo) -->
+      <div class="group-divider">TORRE A</div>
+
+      <div class="row tall">
+        <div class="row-label">2º Pavimento</div>
+        <div class="day-bg"></div><div class="day-bg"></div><div class="day-bg"></div><div class="day-bg"></div><div class="day-bg"></div><div class="day-bg weekend"></div><div class="day-bg weekend"></div>
+        <div class="day-bg"></div><div class="day-bg"></div><div class="day-bg"></div><div class="day-bg"></div><div class="day-bg"></div><div class="day-bg weekend"></div><div class="day-bg weekend"></div>
+        <div class="day-bg"></div><div class="day-bg"></div><div class="day-bg"></div><div class="day-bg"></div><div class="day-bg"></div><div class="day-bg weekend"></div><div class="day-bg weekend"></div>
+        <div class="day-bg"></div><div class="day-bg"></div><div class="day-bg"></div><div class="day-bg"></div><div class="day-bg"></div><div class="day-bg weekend"></div><div class="day-bg weekend"></div>
+        <div class="bar" style="left:472px; width:150px; background:#F5C400;">Alvenaria</div>
+        <div class="bar sub2" style="left:622px; width:90px; background:#9B6BD9;">Pintura</div>
+      </div>
+
+      <div class="row">
+        <div class="row-label">1º Pavimento</div>
+        <div class="day-bg"></div><div class="day-bg"></div><div class="day-bg"></div><div class="day-bg"></div><div class="day-bg"></div><div class="day-bg weekend"></div><div class="day-bg weekend"></div>
+        <div class="day-bg"></div><div class="day-bg"></div><div class="day-bg"></div><div class="day-bg"></div><div class="day-bg"></div><div class="day-bg weekend"></div><div class="day-bg weekend"></div>
+        <div class="day-bg"></div><div class="day-bg"></div><div class="day-bg"></div><div class="day-bg"></div><div class="day-bg"></div><div class="day-bg weekend"></div><div class="day-bg weekend"></div>
+        <div class="day-bg"></div><div class="day-bg"></div><div class="day-bg"></div><div class="day-bg"></div><div class="day-bg"></div><div class="day-bg weekend"></div><div class="day-bg weekend"></div>
+        <div class="bar" style="left:262px; width:150px; background:#F5C400;">Alvenaria</div>
+      </div>
+
+      <div class="row tall">
+        <div class="row-label">Térreo</div>
+        <div class="day-bg"></div><div class="day-bg"></div><div class="day-bg"></div><div class="day-bg"></div><div class="day-bg"></div><div class="day-bg weekend"></div><div class="day-bg weekend"></div>
+        <div class="day-bg"></div><div class="day-bg"></div><div class="day-bg"></div><div class="day-bg"></div><div class="day-bg"></div><div class="day-bg weekend"></div><div class="day-bg weekend"></div>
+        <div class="day-bg"></div><div class="day-bg"></div><div class="day-bg"></div><div class="day-bg"></div><div class="day-bg"></div><div class="day-bg weekend"></div><div class="day-bg weekend"></div>
+        <div class="day-bg"></div><div class="day-bg"></div><div class="day-bg"></div><div class="day-bg"></div><div class="day-bg"></div><div class="day-bg weekend"></div><div class="day-bg weekend"></div>
+        <div class="bar" style="left:150px; width:150px; background:#F5C400;">Alvenaria</div>
+        <div class="bar sub2" style="left:150px; width:120px; background:#4CAF7D;">Reboco</div>
+      </div>
+
+      <!-- TORRE B — só Térreo e 1º Pavimento nesta amostra -->
+      <div class="group-divider">TORRE B</div>
+
+      <div class="row">
+        <div class="row-label">1º Pavimento</div>
+        <div class="day-bg"></div><div class="day-bg"></div><div class="day-bg"></div><div class="day-bg"></div><div class="day-bg"></div><div class="day-bg weekend"></div><div class="day-bg weekend"></div>
+        <div class="day-bg"></div><div class="day-bg"></div><div class="day-bg"></div><div class="day-bg"></div><div class="day-bg"></div><div class="day-bg weekend"></div><div class="day-bg weekend"></div>
+        <div class="day-bg"></div><div class="day-bg"></div><div class="day-bg"></div><div class="day-bg"></div><div class="day-bg"></div><div class="day-bg weekend"></div><div class="day-bg weekend"></div>
+        <div class="day-bg"></div><div class="day-bg"></div><div class="day-bg"></div><div class="day-bg"></div><div class="day-bg"></div><div class="day-bg weekend"></div><div class="day-bg weekend"></div>
+        <div class="bar" style="left:262px; width:120px; background:#F5C400;">Alvenaria</div>
+      </div>
+
+      <div class="row">
+        <div class="row-label">Térreo</div>
+        <div class="day-bg"></div><div class="day-bg"></div><div class="day-bg"></div><div class="day-bg"></div><div class="day-bg"></div><div class="day-bg weekend"></div><div class="day-bg weekend"></div>
+        <div class="day-bg"></div><div class="day-bg"></div><div class="day-bg"></div><div class="day-bg"></div><div class="day-bg"></div><div class="day-bg weekend"></div><div class="day-bg weekend"></div>
+        <div class="day-bg"></div><div class="day-bg"></div><div class="day-bg"></div><div class="day-bg"></div><div class="day-bg"></div><div class="day-bg weekend"></div><div class="day-bg weekend"></div>
+        <div class="day-bg"></div><div class="day-bg"></div><div class="day-bg"></div><div class="day-bg"></div><div class="day-bg"></div><div class="day-bg weekend"></div><div class="day-bg weekend"></div>
+        <div class="bar" style="left:150px; width:120px; background:#F5C400;">Alvenaria</div>
+      </div>
+    </div>
+  </div>
+</main>
+
+</body>
+</html>
