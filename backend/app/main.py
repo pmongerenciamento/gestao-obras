@@ -3,7 +3,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.v1 import routes_import, routes_users
+from app.api.v1 import routes_import, routes_pre_planejamento, routes_users
 from app.infra.db import close_pool, init_pool
 from app.infra.mpxj import shutdown_jvm, start_jvm
 from app.infra.storage import close_supabase_client, init_supabase_client
@@ -38,3 +38,4 @@ app.add_middleware(
 
 app.include_router(routes_import.router, prefix="/api/v1")
 app.include_router(routes_users.router, prefix="/api/v1")
+app.include_router(routes_pre_planejamento.router, prefix="/api/v1")

@@ -1,6 +1,7 @@
 import type { ComponentType } from "react";
 import {
   IconUpload,
+  IconCalendarStats,
   IconChartLine,
   IconLayoutBoard,
   IconTruck,
@@ -23,6 +24,12 @@ export const PROJECT_MODULES: ProjectModule[] = [
     label: "Importar cronograma",
     description: "Envie o arquivo .mpp mais recente do projeto.",
     icon: IconUpload,
+  },
+  {
+    slug: "pre-planejamento",
+    label: "Pré-planejamento",
+    description: "Simulador de linha de balanço antes do cronograma real.",
+    icon: IconCalendarStats,
   },
   {
     slug: "linha-de-balanco",
