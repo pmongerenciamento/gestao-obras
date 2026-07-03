@@ -98,3 +98,7 @@
 45. **Schema de banco planejado** (ainda não escrito como migration): tabelas novas `sim_studies`, `sim_services`, `sim_floors`, `sim_cycles`, `sim_links`, `sim_holidays` — deliberadamente separadas das tabelas de cronograma real do MS Project (`tasks`/`dependencies`/`snapshots`/`task_progress`), já que o Pré-planejamento é um simulador independente, não um cronograma importado.
 46. **Localização na navegação**: nova seção "Pré-planejamento" na sidebar do projeto (`components/layout/ProjectSidebar.tsx` e `lib/project-modules.ts`), entre "Importar cronograma" e "Linha de balanço".
 47. **Nada disso foi implementado ainda** — é só a decisão de escopo/design registrada nesta sessão. Nenhuma migration, tabela, rota ou componente criado. Fica pra planejar em detalhe (com o fluxo de `EnterPlanMode` de sempre) numa sessão futura, junto com o restante do próximo passo já registrado no item 40 (gestão de usuários, módulo de importação).
+48. **Calendário de feriados**:
+    - O calendário fica **salvo no cenário permanentemente** — não é descartado após gerar a linha de balanço.
+    - O planejador pode voltar e revisar/editar o calendário de feriados a qualquer momento, mesmo após a linha de balanço já ter sido gerada.
+    - Ao editar o calendário, o sistema deve **recalcular automaticamente** as datas da linha de balanço.
