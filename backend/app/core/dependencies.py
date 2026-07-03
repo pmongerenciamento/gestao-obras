@@ -8,7 +8,7 @@ import asyncpg
 from fastapi import Depends
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
-from app.core.security import verify_token
+from app.core.security import require_master, verify_token
 from app.infra.db.pool import get_pool
 
 _bearer_scheme = HTTPBearer()
@@ -22,4 +22,13 @@ async def get_db() -> AsyncIterator[asyncpg.connection.Connection]:
 async def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(_bearer_scheme),
 ) -> UUID:
-    return await verify_token(credentials.credentials)
+    user = await verify_token(credentials.credentials)
+    return user.id
+
+
+async def get_current_master_user(
+    credentials: HTTPAuthorizationCredentials = Depends(_bearer_scheme),
+) -> UUID:
+    user = await verify_token(credentials.credentials)
+    require_master(user)
+    return user.id
