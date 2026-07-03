@@ -1,9 +1,16 @@
+"use client";
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
-import { IconMapPin } from "@tabler/icons-react";
+import { IconMapPin, IconDots } from "@tabler/icons-react";
 import type { ProjectSummary } from "@/types/project";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { deleteProject } from "@/lib/api/project-mutations";
 
-// Card de projeto no painel principal: imagem, cliente, nome, cidade, último snapshot, membros, status
+// Card de projeto no painel principal: imagem, cliente, nome, cidade, último snapshot,
+// membros, status. Menu de três pontos (só usuário master) permite excluir o projeto.
 
 const STATUS_LABEL: Record<ProjectSummary["status"], string> = {
   em_andamento: "Em andamento",
@@ -22,12 +29,36 @@ function formatDate(iso: string | null) {
   return new Date(iso).toLocaleDateString("pt-BR");
 }
 
-export function ProjectCard({ project }: { project: ProjectSummary }) {
+interface ProjectCardProps {
+  project: ProjectSummary;
+  isMaster: boolean;
+}
+
+export function ProjectCard({ project, isMaster }: ProjectCardProps) {
+  const router = useRouter();
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  async function handleConfirmDelete() {
+    setDeleting(true);
+    setDeleteError(null);
+    try {
+      await deleteProject(project.id);
+      router.refresh();
+      setConfirmOpen(false);
+    } catch {
+      setDeleteError("Não foi possível excluir o projeto. Tente novamente.");
+    } finally {
+      setDeleting(false);
+    }
+  }
+
   return (
-    <Link
-      href={`/projetos/${project.id}`}
-      className="block overflow-hidden rounded-lg border border-black/10 bg-white shadow-sm transition-colors transition-shadow hover:border-pmon-yellow hover:shadow-md"
-    >
+    <div className="group relative overflow-hidden rounded-lg border border-black/10 bg-white shadow-sm transition-colors transition-shadow hover:border-pmon-yellow hover:shadow-md">
+      <Link href={`/projetos/${project.id}`} className="absolute inset-0 z-10" />
+
       <div className="relative h-[160px] w-full bg-black/5">
         {project.imageUrl ? (
           <Image src={project.imageUrl} alt={project.name} fill className="object-cover" />
@@ -41,8 +72,46 @@ export function ProjectCard({ project }: { project: ProjectSummary }) {
         >
           {STATUS_LABEL[project.status]}
         </span>
+
+        {isMaster && (
+          <div
+            className="absolute left-2 top-2 z-20"
+            onBlur={(e) => {
+              if (!e.currentTarget.contains(e.relatedTarget)) setMenuOpen(false);
+            }}
+          >
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setMenuOpen((open) => !open);
+              }}
+              className="flex h-7 w-7 items-center justify-center rounded-full bg-white/90 text-black/70 shadow-sm hover:bg-white"
+            >
+              <IconDots size={16} />
+            </button>
+            {menuOpen && (
+              <div className="absolute left-0 top-full z-20 mt-1 w-40 rounded-md border border-black/10 bg-white py-1 shadow-lg">
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setMenuOpen(false);
+                    setConfirmOpen(true);
+                  }}
+                  className="w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50"
+                >
+                  Excluir projeto
+                </button>
+              </div>
+            )}
+          </div>
+        )}
       </div>
-      <div className="flex flex-col gap-1 p-4">
+
+      <div className="relative flex flex-col gap-1 p-4">
         <p className="text-xs text-black/50">{project.clientName}</p>
         <h3 className="font-semibold text-black">{project.name}</h3>
         <p className="flex items-center gap-1 text-sm text-black/60">
@@ -64,6 +133,21 @@ export function ProjectCard({ project }: { project: ProjectSummary }) {
           ))}
         </div>
       </div>
-    </Link>
+
+      <ConfirmDialog
+        open={confirmOpen}
+        title="Excluir projeto"
+        description={`Tem certeza que deseja excluir o projeto ${project.name}? Esta ação não pode ser desfeita.`}
+        confirmLabel="Excluir"
+        loadingLabel="Excluindo..."
+        isLoading={deleting}
+        error={deleteError}
+        onConfirm={handleConfirmDelete}
+        onCancel={() => {
+          setConfirmOpen(false);
+          setDeleteError(null);
+        }}
+      />
+    </div>
   );
 }

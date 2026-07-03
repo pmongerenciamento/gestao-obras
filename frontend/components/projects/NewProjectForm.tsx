@@ -16,7 +16,7 @@ import {
   type TipologiaObra,
   type TipologiaConstrutiva,
 } from "@/types/project";
-import { createProject, uploadProjectImage } from "@/lib/api/create-project";
+import { createProject, uploadProjectImage } from "@/lib/api/project-mutations";
 import { parseDigits, formatThousands, formatCurrencyBRL } from "@/lib/format-number";
 
 const tipologiaObraValues = TIPOLOGIA_OBRA_OPTIONS.map((o) => o.value) as [

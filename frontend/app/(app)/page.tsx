@@ -16,6 +16,7 @@ export default async function DashboardPage() {
 
   const projects = await listProjects();
   const activeCount = projects.filter((project) => project.status === "em_andamento").length;
+  const isMaster = isMasterUser(user?.email);
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -41,11 +42,11 @@ export default async function DashboardPage() {
         ) : (
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
             {projects.map((project) => (
-              <ProjectCard key={project.id} project={project} />
+              <ProjectCard key={project.id} project={project} isMaster={isMaster} />
             ))}
           </div>
         )}
-        {isMasterUser(user?.email) && <AdminBar />}
+        {isMaster && <AdminBar />}
       </main>
     </div>
   );

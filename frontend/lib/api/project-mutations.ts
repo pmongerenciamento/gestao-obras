@@ -1,10 +1,11 @@
 import { createClient } from "@/lib/supabase/client";
 import type { NewProjectInput } from "@/types/project";
 
-// Só client-side (não importa lib/supabase/server.ts) — chamado a partir do
-// NewProjectForm, que roda inteiramente no browser. owner_id não é parâmetro:
-// resolvido aqui via sessão, e a RLS de projects (owner_id = auth.uid()) já
-// rejeita qualquer valor divergente de qualquer forma.
+// Só client-side (não importa lib/supabase/server.ts) — chamado a partir de
+// componentes que rodam inteiramente no browser (NewProjectForm, ProjectCard).
+// owner_id não é parâmetro nas mutações que criam linha: resolvido aqui via
+// sessão, e a RLS de projects (owner_id = auth.uid()) já rejeita qualquer
+// valor divergente de qualquer forma.
 
 async function getCurrentUserId(): Promise<string> {
   const supabase = createClient();
@@ -65,4 +66,11 @@ export async function createProject(input: NewProjectInput): Promise<string> {
   }
 
   return data.id;
+}
+
+export async function deleteProject(id: string): Promise<void> {
+  const supabase = createClient();
+  const { error } = await supabase.from("projects").delete().eq("id", id);
+
+  if (error) throw error;
 }
