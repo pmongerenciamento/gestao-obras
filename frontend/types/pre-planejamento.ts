@@ -37,11 +37,17 @@ export interface Holiday {
   isNational: boolean;
 }
 
+export interface Predecessor {
+  cycleId: string;
+  predecessorId: string;
+}
+
 export interface StudyDetail extends Study {
   services: Service[];
   floors: Floor[];
   cycles: Cycle[];
   holidays: Holiday[];
+  predecessors: Predecessor[];
 }
 
 export interface CreateStudyInput {
@@ -62,6 +68,7 @@ export interface UpdateStudyInput {
 }
 
 export interface ServiceInput {
+  id?: string;
   name: string;
   color: string;
   orderIndex: number;
@@ -69,6 +76,7 @@ export interface ServiceInput {
 }
 
 export interface FloorInput {
+  id?: string;
   groupName: string;
   floorName: string;
   orderIndex: number;
@@ -84,4 +92,13 @@ export interface SaveCyclesInput {
   services: ServiceInput[];
   floors: FloorInput[];
   cycles: CycleInput[];
+}
+
+export interface WbsOverrideInput {
+  cycleId: string;
+  predecessorIds: string[];
+}
+
+export interface SaveWbsOverridesInput {
+  overrides: WbsOverrideInput[];
 }

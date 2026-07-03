@@ -44,11 +44,17 @@ class HolidayOut(BaseModel):
     is_national: bool
 
 
+class PredecessorOut(BaseModel):
+    cycle_id: UUID
+    predecessor_id: UUID
+
+
 class StudyDetailOut(StudyOut):
     services: list[ServiceOut]
     floors: list[FloorOut]
     cycles: list[CycleOut]
     holidays: list[HolidayOut]
+    predecessors: list[PredecessorOut]
 
 
 class CreateStudyRequest(BaseModel):
@@ -69,6 +75,7 @@ class UpdateStudyRequest(BaseModel):
 
 
 class ServiceIn(BaseModel):
+    id: UUID | None = None
     name: str
     color: str
     order_index: int
@@ -76,6 +83,7 @@ class ServiceIn(BaseModel):
 
 
 class FloorIn(BaseModel):
+    id: UUID | None = None
     group_name: str
     floor_name: str
     order_index: int
@@ -91,3 +99,12 @@ class SaveCyclesRequest(BaseModel):
     services: list[ServiceIn]
     floors: list[FloorIn]
     cycles: list[CycleIn]
+
+
+class WbsOverrideIn(BaseModel):
+    cycle_id: UUID
+    predecessor_ids: list[UUID]
+
+
+class SaveWbsOverridesRequest(BaseModel):
+    overrides: list[WbsOverrideIn]

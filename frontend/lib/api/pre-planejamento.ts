@@ -1,4 +1,4 @@
-import type { Cycle, Floor, Holiday, Service, Study, StudyDetail } from "@/types/pre-planejamento";
+import type { Cycle, Floor, Holiday, Predecessor, Service, Study, StudyDetail } from "@/types/pre-planejamento";
 import { apiFetch } from "@/lib/api/backend-client";
 import { createClient } from "@/lib/supabase/server";
 
@@ -43,11 +43,17 @@ interface RawHoliday {
   is_national: boolean;
 }
 
+interface RawPredecessor {
+  cycle_id: string;
+  predecessor_id: string;
+}
+
 interface RawStudyDetail extends RawStudy {
   services: RawService[];
   floors: RawFloor[];
   cycles: RawCycle[];
   holidays: RawHoliday[];
+  predecessors: RawPredecessor[];
 }
 
 function mapStudy(raw: RawStudy): Study {
@@ -74,6 +80,10 @@ function mapCycle(raw: RawCycle): Cycle {
 
 function mapHoliday(raw: RawHoliday): Holiday {
   return { id: raw.id, date: raw.date, description: raw.description, isNational: raw.is_national };
+}
+
+function mapPredecessor(raw: RawPredecessor): Predecessor {
+  return { cycleId: raw.cycle_id, predecessorId: raw.predecessor_id };
 }
 
 async function getAccessToken(): Promise<string | null> {
@@ -105,6 +115,7 @@ export async function getStudy(projectId: string, estudoId: string): Promise<Stu
       floors: raw.floors.map(mapFloor),
       cycles: raw.cycles.map(mapCycle),
       holidays: raw.holidays.map(mapHoliday),
+      predecessors: raw.predecessors.map(mapPredecessor),
     };
   } catch {
     return null;

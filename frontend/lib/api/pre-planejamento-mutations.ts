@@ -1,4 +1,9 @@
-import type { CreateStudyInput, SaveCyclesInput, UpdateStudyInput } from "@/types/pre-planejamento";
+import type {
+  CreateStudyInput,
+  SaveCyclesInput,
+  SaveWbsOverridesInput,
+  UpdateStudyInput,
+} from "@/types/pre-planejamento";
 import { apiFetch } from "@/lib/api/backend-client";
 import { createClient } from "@/lib/supabase/client";
 
@@ -59,12 +64,14 @@ export async function saveCycles(
     method: "PUT",
     body: JSON.stringify({
       services: input.services.map((s) => ({
+        id: s.id,
         name: s.name,
         color: s.color,
         order_index: s.orderIndex,
         lag_days: s.lagDays,
       })),
       floors: input.floors.map((f) => ({
+        id: f.id,
         group_name: f.groupName,
         floor_name: f.floorName,
         order_index: f.orderIndex,
@@ -73,6 +80,23 @@ export async function saveCycles(
         service_index: c.serviceIndex,
         floor_index: c.floorIndex,
         duration_days: c.durationDays,
+      })),
+    }),
+  });
+}
+
+export async function saveWbsOverrides(
+  projectId: string,
+  estudoId: string,
+  input: SaveWbsOverridesInput,
+): Promise<void> {
+  const token = await getAccessToken();
+  await apiFetch(`/api/v1/pre-planejamento/${projectId}/estudos/${estudoId}/predecessores`, token, {
+    method: "PUT",
+    body: JSON.stringify({
+      overrides: input.overrides.map((o) => ({
+        cycle_id: o.cycleId,
+        predecessor_ids: o.predecessorIds,
       })),
     }),
   });

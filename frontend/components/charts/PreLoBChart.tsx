@@ -11,7 +11,7 @@ import { computeSchedule, toISODate } from "@/lib/pre-planejamento/scheduler";
 // SVG imperativo, pra integrar limpo com o resto do app.
 
 const DAY_WIDTH = 28;
-const ROW_HEIGHT = 32;
+const ROW_HEIGHT = 22; // compacto, próximo do visual dos mockups (docs/mockups/pre-plan-lob.html)
 const WEEKDAY_LETTERS = ["D", "S", "T", "Q", "Q", "S", "S"];
 
 interface FloorTrack {
@@ -183,7 +183,11 @@ export function PreLoBChart() {
               <div className="sticky left-0 z-10 w-[160px] border-b border-black/10 bg-pmon-yellow/10 px-3 py-1 text-xs font-semibold text-black/70">
                 {groupName}
               </div>
-              {floors.map((floor) => {
+              {/* Pavimentos de baixo pra cima dentro do grupo — leitura visual
+                  padrão de Linha de Balanço de obra vertical (Térreo embaixo,
+                  andares mais altos em cima). order_index no banco continua
+                  crescente, só a exibição inverte. */}
+              {[...floors].reverse().map((floor) => {
                 const tracks = partitionIntoTracks(cyclesByFloor.get(floor.id) ?? []);
                 const rowHeight = Math.max(1, tracks.length) * ROW_HEIGHT;
                 return (
@@ -203,11 +207,11 @@ export function PreLoBChart() {
                                 position: "absolute",
                                 left: barLeft(item.start),
                                 width: barWidth(item.start, item.end),
-                                top: trackIndex * ROW_HEIGHT + 4,
-                                height: ROW_HEIGHT - 8,
+                                top: trackIndex * ROW_HEIGHT + 2,
+                                height: ROW_HEIGHT - 4,
                                 backgroundColor: service?.color ?? "#F5C400",
                               }}
-                              className="truncate rounded px-1 text-[10px] leading-[24px] text-white"
+                              className="truncate rounded px-1 text-[10px] leading-[18px] text-white"
                             >
                               {service?.name}
                             </div>

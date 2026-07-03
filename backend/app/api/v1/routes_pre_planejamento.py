@@ -15,13 +15,21 @@ from fastapi.responses import Response
 
 from app.core.dependencies import get_current_user, get_db
 from app.domain.pre_planejamento import repository
-from app.domain.pre_planejamento.repository import CycleInput, FloorInput, HolidayInput, ServiceInput
+from app.domain.pre_planejamento.repository import (
+    CycleInput,
+    FloorInput,
+    HolidayInput,
+    ServiceInput,
+    WbsOverrideInput,
+)
 from app.schemas import (
     CreateStudyRequest,
     CycleOut,
     FloorOut,
     HolidayOut,
+    PredecessorOut,
     SaveCyclesRequest,
+    SaveWbsOverridesRequest,
     ServiceOut,
     StudyDetailOut,
     StudyOut,
@@ -85,12 +93,14 @@ async def get_estudo(
     floors = await repository.get_floors(conn, estudo_id)
     cycles = await repository.get_cycles(conn, estudo_id)
     holidays = await repository.get_holidays(conn, estudo_id)
+    predecessors = await repository.get_wbs_overrides(conn, estudo_id)
     return StudyDetailOut(
         **dict(study),
         services=[ServiceOut(**dict(r)) for r in services],
         floors=[FloorOut(**dict(r)) for r in floors],
         cycles=[CycleOut(**dict(r)) for r in cycles],
         holidays=[HolidayOut(**dict(r)) for r in holidays],
+        predecessors=[PredecessorOut(**dict(r)) for r in predecessors],
     )
 
 
@@ -133,8 +143,30 @@ async def put_ciclos(
     await _get_owned_study(conn, project_id, estudo_id, owner_id)
     await repository.replace_cycles(
         conn, estudo_id,
-        [ServiceInput(name=s.name, color=s.color, order_index=s.order_index, lag_days=s.lag_days) for s in body.services],
-        [FloorInput(group_name=f.group_name, floor_name=f.floor_name, order_index=f.order_index) for f in body.floors],
+        [
+            ServiceInput(id=s.id, name=s.name, color=s.color, order_index=s.order_index, lag_days=s.lag_days)
+            for s in body.services
+        ],
+        [
+            FloorInput(id=f.id, group_name=f.group_name, floor_name=f.floor_name, order_index=f.order_index)
+            for f in body.floors
+        ],
         [CycleInput(service_index=c.service_index, floor_index=c.floor_index, duration_days=c.duration_days) for c in body.cycles],
+    )
+    return await get_estudo(project_id, estudo_id, owner_id, conn)
+
+
+@router.put("/pre-planejamento/{project_id}/estudos/{estudo_id}/predecessores")
+async def put_predecessores(
+    project_id: UUID,
+    estudo_id: UUID,
+    body: SaveWbsOverridesRequest,
+    owner_id: UUID = Depends(get_current_user),
+    conn: asyncpg.connection.Connection = Depends(get_db),
+) -> StudyDetailOut:
+    await _get_owned_study(conn, project_id, estudo_id, owner_id)
+    await repository.replace_wbs_overrides(
+        conn, estudo_id,
+        [WbsOverrideInput(cycle_id=o.cycle_id, predecessor_ids=o.predecessor_ids) for o in body.overrides],
     )
     return await get_estudo(project_id, estudo_id, owner_id, conn)

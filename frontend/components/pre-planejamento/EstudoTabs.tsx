@@ -10,6 +10,7 @@ interface EstudoTabsProps {
 const TABS = [
   { slug: "calendario", label: "Calendário" },
   { slug: "servicos", label: "Serviços e lotes" },
+  { slug: "estrutura-wbs", label: "Estrutura WBS" },
   { slug: "linha-de-balanco", label: "Linha de balanço" },
 ];
 
