@@ -170,4 +170,21 @@
 72. **2 bugs de ambiente encontrados e corrigidos durante o teste do usuário** (nenhum era erro de código — `tsc`/`eslint` continuaram limpos o tempo todo):
     - **CSS do Tailwind sumindo** (tela de login sem estilo): cache de build `.next` corrompido por ter 2 processos `next dev` escrevendo na mesma pasta ao mesmo tempo (um subiu sozinho na porta 3001 quando a 3000 já estava ocupada). Resolvido apagando `.next` e subindo um único processo limpo.
     - **404 ao criar cenário novo**: o processo do backend (`uvicorn`) não tinha sido reiniciado depois das mudanças de schema da WBS (item 70) — continuava servindo a resposta antiga sem o campo `predecessors`, o que quebrava `getStudy()` no frontend (`.map()` em `undefined`) e virava `notFound()`. Lição: **mudança de schema/rota no backend exige reiniciar o `uvicorn`** — hot-reload do Next não cobre o processo Python.
-73. **Próximos passos**: módulo de importação no frontend (`POST /api/v1/upload` já pronto no backend, ainda sem UI), `POST/GET/PATCH /api/v1/projects` no backend (gap antigo, item 40). Fora de escopo, registrado pra depois: tipos de dependência além de finish-to-start (SS/FF/FS+lag) na WBS, persistir estado de recolher/expandir da árvore.
+73. **Encerramento da sessão — resumo completo do dia** (módulo Pré-planejamento):
+    1. Ajustes visuais alinhados aos mockups de `docs/mockups/` (item 68): mini calendário, feriados nacionais/personalizados separados, coluna de rótulo de grupo/torre, ciclo padrão + "Aplicar", inputs sem spinner, múltiplos pavimentos por `;`, pavimentos de baixo pra cima na Linha de Balanço.
+    2. Cores de serviço automáticas via ângulo áureo: `hue = (index * 137.5) % 360`, saturação 65%, luminosidade 50% — distintas mesmo com 50+ serviços, não mais editáveis pelo usuário (`generateServiceColor()` em `CyclesGrid.tsx`).
+    3. Campo "Defasagem/Lag" removido da grade de ciclos — encadeamento entre tarefas passou a ser controlado pelas predecessoras/sucessoras da Estrutura WBS, não fazia sentido manter os dois modelos.
+    4. **Estrutura WBS implementada**: hierarquia Torre → Serviço → Pavimento, predecessoras digitadas por ID separadas por `;` (resolvidas internamente pro UUID do ciclo), sucessoras sempre calculadas (nunca editadas à mão), Início/Término calculados por `lib/pre-planejamento/scheduler.ts` (forward-pass topológico/Kahn sobre o grafo de predecessores).
+    5. Botão "Replicar torre": duplica pavimentos + ciclos da torre inteira, remapeia só os predecessores internos à torre (os que apontam pra fora ficam de fora da cópia).
+    6. Drag fill + Ctrl+D nos campos de Duração e Predecessores da WBS, estilo planilha.
+    7. Migration `008_sim_wbs_overrides.sql` aplicada no Supabase (tabela dedicada de predecessores, separada de `sim_links`).
+    8. Exclusão de grupo/torre implementada com `ConfirmDialog`.
+    9. Linhas da Linha de Balanço mais compactas (`ROW_HEIGHT` 32→22 em `PreLoBChart.tsx`).
+    10. CSS do Tailwind verificado e confirmado funcional (os 2 sumiços reportados eram cache `.next` corrompido e backend desatualizado, ver item 72 — não um problema de configuração do Tailwind em si).
+    - Commits da sessão: `9da9197` (WBS inicial + ajustes visuais + cores + exclusão de grupo + LOB compacta), `06ee3ee` (hierarquia Torre→Serviço→Pavimento + replicar torre + drag fill/Ctrl+D).
+74. **Pendências para a próxima sessão**:
+    - Validação visual completa do módulo Pré-planejamento no navegador (esta sessão validou só via `tsc`/`eslint` + testes pontuais do usuário — falta uma passada de ponta a ponta pelas 4 abas).
+    - Banner de período no calendário (ainda não especificado em detalhe — levantar o requisito com o usuário antes de planejar).
+    - Teste do módulo com os sócios.
+    - Itens mais antigos ainda em aberto: módulo de importação no frontend (`POST /api/v1/upload` já pronto no backend, ainda sem UI), `POST/GET/PATCH /api/v1/projects` no backend (gap desde o item 40).
+    - Fora de escopo, registrado pra depois: tipos de dependência além de finish-to-start (SS/FF/FS+lag) na WBS, persistir estado de recolher/expandir da árvore.
