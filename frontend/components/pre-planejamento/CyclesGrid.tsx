@@ -179,6 +179,14 @@ export function CyclesGrid() {
     setDeleteGroupTarget(null);
   }
 
+  // Renomeia o grupo/torre — recusa nome vazio ou colidindo com outro grupo
+  // já existente (evitaria fundir dois grupos sem o usuário pedir isso).
+  function renameGroup(oldName: string, newName: string) {
+    if (!newName || newName === oldName || groups.includes(newName)) return;
+    setGroups((prev) => prev.map((g) => (g === oldName ? newName : g)));
+    setFloors((prev) => prev.map((f) => (f.groupName === oldName ? { ...f, groupName: newName } : f)));
+  }
+
   // Duplica os pavimentos + durações já preenchidas de um grupo/torre sob um
   // novo nome (sufixo " (cópia)") — puramente local, igual "+ Grupo"/"+
   // Pavimento": só vai pro banco quando o usuário clicar em "Salvar".
@@ -384,6 +392,7 @@ export function CyclesGrid() {
                 onRemoveFloor={removeFloor}
                 onRequestRemoveGroup={setDeleteGroupTarget}
                 onReplicateGroup={replicateGroup}
+                onRenameGroup={renameGroup}
                 columnCount={services.length}
               />
             ))}
@@ -525,6 +534,7 @@ interface FloorGroupRowsProps {
   onRemoveFloor: (index: number) => void;
   onRequestRemoveGroup: (groupName: string) => void;
   onReplicateGroup: (groupName: string) => void;
+  onRenameGroup: (oldName: string, newName: string) => void;
   columnCount: number;
 }
 
@@ -534,13 +544,28 @@ function GroupLabelCell({
   rowSpan,
   onRequestRemoveGroup,
   onReplicateGroup,
+  onRenameGroup,
 }: {
   groupName: string;
   groupColor: string;
   rowSpan?: number;
   onRequestRemoveGroup: (groupName: string) => void;
   onReplicateGroup: (groupName: string) => void;
+  onRenameGroup: (oldName: string, newName: string) => void;
 }) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [draftName, setDraftName] = useState(groupName);
+
+  function startEditing() {
+    setDraftName(groupName);
+    setIsEditing(true);
+  }
+
+  function commitRename() {
+    setIsEditing(false);
+    onRenameGroup(groupName, draftName.trim());
+  }
+
   return (
     <td
       rowSpan={rowSpan}
@@ -567,7 +592,29 @@ function GroupLabelCell({
         >
           <IconCopy size={12} />
         </button>
-        {groupName.toUpperCase()}
+        {isEditing ? (
+          <input
+            autoFocus
+            value={draftName}
+            onChange={(e) => setDraftName(e.target.value)}
+            onFocus={(e) => e.target.select()}
+            onBlur={commitRename}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                commitRename();
+              } else if (e.key === "Escape") {
+                e.preventDefault();
+                setIsEditing(false);
+              }
+            }}
+            className="w-16 border-b border-white/50 bg-transparent text-center text-[10px] font-bold text-white outline-none"
+          />
+        ) : (
+          <span onClick={startEditing} className="cursor-text hover:underline" title="Clique para renomear">
+            {groupName.toUpperCase()}
+          </span>
+        )}
       </div>
     </td>
   );
@@ -584,6 +631,7 @@ function FloorGroupRows({
   onRemoveFloor,
   onRequestRemoveGroup,
   onReplicateGroup,
+  onRenameGroup,
   columnCount,
 }: FloorGroupRowsProps) {
   if (floorIndices.length === 0) {
@@ -594,6 +642,7 @@ function FloorGroupRows({
           groupColor={groupColor}
           onRequestRemoveGroup={onRequestRemoveGroup}
           onReplicateGroup={onReplicateGroup}
+          onRenameGroup={onRenameGroup}
         />
         <td colSpan={columnCount + 1} className="border-b border-black/10 px-3 py-3 text-sm text-black/40">
           Nenhum pavimento neste grupo ainda.
@@ -613,6 +662,7 @@ function FloorGroupRows({
               rowSpan={floorIndices.length}
               onRequestRemoveGroup={onRequestRemoveGroup}
               onReplicateGroup={onReplicateGroup}
+              onRenameGroup={onRenameGroup}
             />
           )}
           <td className="sticky left-8 z-10 border-b border-r border-black/10 bg-white px-3 py-2 text-black">
