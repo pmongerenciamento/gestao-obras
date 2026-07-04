@@ -1,6 +1,8 @@
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
+// Roda no Edge Runtime (padrão do Next.js) — sem "runtime" na config abaixo.
+
 export async function middleware(request: NextRequest) {
   let response = NextResponse.next({ request });
 
