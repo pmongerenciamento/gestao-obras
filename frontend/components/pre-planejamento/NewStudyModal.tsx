@@ -16,6 +16,7 @@ export function NewStudyModal({ open, projectId, onClose }: NewStudyModalProps) 
   const router = useRouter();
   const [name, setName] = useState("");
   const [startDate, setStartDate] = useState("");
+  const [durationMonths, setDurationMonths] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -24,6 +25,7 @@ export function NewStudyModal({ open, projectId, onClose }: NewStudyModalProps) 
   function handleClose() {
     setName("");
     setStartDate("");
+    setDurationMonths("");
     setError(null);
     onClose();
   }
@@ -33,7 +35,11 @@ export function NewStudyModal({ open, projectId, onClose }: NewStudyModalProps) 
     setSubmitting(true);
     setError(null);
     try {
-      const estudoId = await createStudy(projectId, { name, startDate });
+      const estudoId = await createStudy(projectId, {
+        name,
+        startDate,
+        durationMonths: Number(durationMonths),
+      });
       handleClose();
       router.push(`/projetos/${projectId}/pre-planejamento/${estudoId}/calendario`);
       router.refresh();
@@ -63,6 +69,16 @@ export function NewStudyModal({ open, projectId, onClose }: NewStudyModalProps) 
             variant="light"
             value={startDate}
             onChange={(e) => setStartDate(e.target.value)}
+            required
+          />
+          <Input
+            id="studyDurationMonths"
+            label="Prazo estimado (meses)"
+            type="number"
+            min={1}
+            variant="light"
+            value={durationMonths}
+            onChange={(e) => setDurationMonths(e.target.value)}
             required
           />
           {error && <p className="text-sm text-red-500">{error}</p>}

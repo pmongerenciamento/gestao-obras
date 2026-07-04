@@ -4,7 +4,7 @@ from __future__ import annotations
 from datetime import date, datetime
 from uuid import UUID
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class StudyOut(BaseModel):
@@ -12,6 +12,7 @@ class StudyOut(BaseModel):
     project_id: UUID
     name: str
     start_date: date
+    duration_months: int | None
     created_at: datetime
 
 
@@ -60,6 +61,7 @@ class StudyDetailOut(StudyOut):
 class CreateStudyRequest(BaseModel):
     name: str
     start_date: date
+    duration_months: int = Field(gt=0)
 
 
 class HolidayIn(BaseModel):

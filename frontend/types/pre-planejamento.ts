@@ -5,6 +5,7 @@ export interface Study {
   projectId: string;
   name: string;
   startDate: string;
+  durationMonths: number | null;
   createdAt: string;
 }
 
@@ -53,6 +54,7 @@ export interface StudyDetail extends Study {
 export interface CreateStudyInput {
   name: string;
   startDate: string;
+  durationMonths: number;
 }
 
 export interface HolidayInput {

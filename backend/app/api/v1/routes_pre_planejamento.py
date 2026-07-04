@@ -76,7 +76,7 @@ async def post_estudo(
     conn: asyncpg.connection.Connection = Depends(get_db),
 ) -> StudyOut:
     await _ensure_project_access(conn, project_id, owner_id)
-    study_id = await repository.create_study(conn, project_id, body.name, body.start_date)
+    study_id = await repository.create_study(conn, project_id, body.name, body.start_date, body.duration_months)
     study = await repository.get_study(conn, study_id)
     return StudyOut(**dict(study))
 

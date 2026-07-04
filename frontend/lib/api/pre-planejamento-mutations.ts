@@ -26,7 +26,11 @@ export async function createStudy(projectId: string, input: CreateStudyInput): P
   const token = await getAccessToken();
   const raw = await apiFetch<{ id: string }>(`/api/v1/pre-planejamento/${projectId}/estudos`, token, {
     method: "POST",
-    body: JSON.stringify({ name: input.name, start_date: input.startDate }),
+    body: JSON.stringify({
+      name: input.name,
+      start_date: input.startDate,
+      duration_months: input.durationMonths,
+    }),
   });
   return raw.id;
 }

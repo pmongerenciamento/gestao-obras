@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { IconPlus, IconTrash, IconX } from "@tabler/icons-react";
+import { IconCopy, IconPlus, IconTrash, IconX } from "@tabler/icons-react";
 import type { FloorInput, ServiceInput } from "@/types/pre-planejamento";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
@@ -179,6 +179,44 @@ export function CyclesGrid() {
     setDeleteGroupTarget(null);
   }
 
+  // Duplica os pavimentos + durações já preenchidas de um grupo/torre sob um
+  // novo nome (sufixo " (cópia)") — puramente local, igual "+ Grupo"/"+
+  // Pavimento": só vai pro banco quando o usuário clicar em "Salvar".
+  function replicateGroup(groupName: string) {
+    const sourceIndices = floors.reduce<number[]>((acc, floor, index) => {
+      if (floor.groupName === groupName) acc.push(index);
+      return acc;
+    }, []);
+    if (sourceIndices.length === 0) return;
+
+    let newGroupName = `${groupName} (cópia)`;
+    let suffix = 2;
+    while (groups.includes(newGroupName)) {
+      newGroupName = `${groupName} (cópia ${suffix})`;
+      suffix += 1;
+    }
+
+    const sortedSourceIndices = [...sourceIndices].sort((a, b) => floors[a].orderIndex - floors[b].orderIndex);
+    const newFloors = sortedSourceIndices.map((floorIndex, i) => ({
+      groupName: newGroupName,
+      floorName: floors[floorIndex].floorName,
+      orderIndex: floors.length + i,
+    }));
+
+    const newCycles = { ...cycles };
+    sortedSourceIndices.forEach((oldFloorIndex, i) => {
+      const newFloorIndex = floors.length + i;
+      services.forEach((_, serviceIndex) => {
+        const key = cycleKey(serviceIndex, oldFloorIndex);
+        if (key in cycles) newCycles[cycleKey(serviceIndex, newFloorIndex)] = cycles[key];
+      });
+    });
+
+    setFloors([...floors, ...newFloors]);
+    setCycles(newCycles);
+    setGroups([...groups, newGroupName]);
+  }
+
   function addFloors(groupName: string, rawNames: string) {
     const names = rawNames
       .split(";")
@@ -345,6 +383,7 @@ export function CyclesGrid() {
                 onUpdateCycle={updateCycle}
                 onRemoveFloor={removeFloor}
                 onRequestRemoveGroup={setDeleteGroupTarget}
+                onReplicateGroup={replicateGroup}
                 columnCount={services.length}
               />
             ))}
@@ -485,6 +524,7 @@ interface FloorGroupRowsProps {
   onUpdateCycle: (serviceIndex: number, floorIndex: number, value: string) => void;
   onRemoveFloor: (index: number) => void;
   onRequestRemoveGroup: (groupName: string) => void;
+  onReplicateGroup: (groupName: string) => void;
   columnCount: number;
 }
 
@@ -493,11 +533,13 @@ function GroupLabelCell({
   groupColor,
   rowSpan,
   onRequestRemoveGroup,
+  onReplicateGroup,
 }: {
   groupName: string;
   groupColor: string;
   rowSpan?: number;
   onRequestRemoveGroup: (groupName: string) => void;
+  onReplicateGroup: (groupName: string) => void;
 }) {
   return (
     <td
@@ -517,6 +559,14 @@ function GroupLabelCell({
         >
           <IconX size={12} />
         </button>
+        <button
+          type="button"
+          onClick={() => onReplicateGroup(groupName)}
+          className="text-white/70 hover:text-white"
+          title="Replicar torre"
+        >
+          <IconCopy size={12} />
+        </button>
         {groupName.toUpperCase()}
       </div>
     </td>
@@ -533,12 +583,18 @@ function FloorGroupRows({
   onUpdateCycle,
   onRemoveFloor,
   onRequestRemoveGroup,
+  onReplicateGroup,
   columnCount,
 }: FloorGroupRowsProps) {
   if (floorIndices.length === 0) {
     return (
       <tr>
-        <GroupLabelCell groupName={groupName} groupColor={groupColor} onRequestRemoveGroup={onRequestRemoveGroup} />
+        <GroupLabelCell
+          groupName={groupName}
+          groupColor={groupColor}
+          onRequestRemoveGroup={onRequestRemoveGroup}
+          onReplicateGroup={onReplicateGroup}
+        />
         <td colSpan={columnCount + 1} className="border-b border-black/10 px-3 py-3 text-sm text-black/40">
           Nenhum pavimento neste grupo ainda.
         </td>
@@ -556,6 +612,7 @@ function FloorGroupRows({
               groupColor={groupColor}
               rowSpan={floorIndices.length}
               onRequestRemoveGroup={onRequestRemoveGroup}
+              onReplicateGroup={onReplicateGroup}
             />
           )}
           <td className="sticky left-8 z-10 border-b border-r border-black/10 bg-white px-3 py-2 text-black">

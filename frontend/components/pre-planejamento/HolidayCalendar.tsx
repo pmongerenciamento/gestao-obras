@@ -20,6 +20,12 @@ function formatDate(iso: string) {
   return new Date(`${iso}T00:00:00`).toLocaleDateString("pt-BR");
 }
 
+function addMonthsIso(iso: string, months: number): string {
+  const date = new Date(`${iso}T00:00:00`);
+  date.setMonth(date.getMonth() + months);
+  return date.toISOString().slice(0, 10);
+}
+
 export function HolidayCalendar() {
   const router = useRouter();
   const { projectId, study } = useStudy();
@@ -66,93 +72,113 @@ export function HolidayCalendar() {
   const nationalHolidays = holidays.filter((h) => h.isNational);
   const customHolidays = holidays.filter((h) => !h.isNational);
 
+  const endDate = study.durationMonths ? addMonthsIso(study.startDate, study.durationMonths) : null;
+  const nationalYears = nationalHolidays.map((h) => new Date(`${h.date}T00:00:00`).getFullYear());
+  const yearRange =
+    nationalYears.length > 0 ? { start: Math.min(...nationalYears), end: Math.max(...nationalYears) } : null;
+
   return (
-    <div className="grid grid-cols-[340px_1fr] items-start gap-6">
-      <div className="rounded-lg border border-black/10 bg-white p-4">
-        <h2 className="mb-3 text-xs font-semibold uppercase text-black/50">Visão do mês</h2>
-        <MiniCalendar initialMonth={study.startDate} holidays={holidays} />
+    <div className="flex flex-col gap-4">
+      <div className="rounded-lg border border-black/10 bg-black/[0.02] px-4 py-3 text-sm text-black/70">
+        <p>
+          Período do cenário: <span className="font-medium text-black">{formatDate(study.startDate)}</span>
+          {" → "}
+          <span className="font-medium text-black">{endDate ? formatDate(endDate) : "prazo não informado"}</span>
+        </p>
+        <p className="mt-1">
+          Feriados gerados de{" "}
+          <span className="font-medium text-black">{yearRange ? yearRange.start : "—"}</span> a{" "}
+          <span className="font-medium text-black">{yearRange ? yearRange.end : "—"}</span>
+        </p>
       </div>
 
-      <div className="flex flex-col gap-6">
-        <div>
-          <h2 className="mb-2 text-xs font-semibold uppercase text-black/50">Feriados nacionais (pré-cadastrados)</h2>
-          <div className="flex flex-col gap-2 rounded-lg border border-black/10 bg-white p-2">
-            {nationalHolidays.map((holiday) => (
-              <div
-                key={holiday.id}
-                className="flex items-center justify-between rounded-md bg-black/[0.02] px-3 py-2 text-sm"
-              >
-                <span className="w-24 shrink-0 text-black/60">{formatDate(holiday.date)}</span>
-                <span className="flex-1 text-black">{holiday.description}</span>
-                <span className="text-black/30" title="Feriado nacional — não pode ser removido">
-                  🔒
-                </span>
-              </div>
-            ))}
-            {nationalHolidays.length === 0 && (
-              <p className="px-3 py-4 text-center text-sm text-black/40">Nenhum feriado nacional.</p>
-            )}
-          </div>
+      <div className="grid grid-cols-[340px_1fr] items-start gap-6">
+        <div className="rounded-lg border border-black/10 bg-white p-4">
+          <h2 className="mb-3 text-xs font-semibold uppercase text-black/50">Visão do mês</h2>
+          <MiniCalendar initialMonth={study.startDate} holidays={holidays} />
         </div>
 
-        <div>
-          <h2 className="mb-2 text-xs font-semibold uppercase text-black/50">Feriados personalizados</h2>
-          <div className="flex flex-col gap-2 rounded-lg border border-black/10 bg-white p-2">
-            {customHolidays.map((holiday) => (
-              <div
-                key={holiday.id}
-                className="flex items-center justify-between rounded-md bg-blue-50 px-3 py-2 text-sm"
-              >
-                <span className="w-24 shrink-0 text-black/60">{formatDate(holiday.date)}</span>
-                <span className="flex-1 text-black">{holiday.description}</span>
-                <button
-                  type="button"
-                  onClick={() => handleRemove(holiday.id)}
-                  className="text-black/40 hover:text-red-600"
+        <div className="flex flex-col gap-6">
+          <div>
+            <h2 className="mb-2 text-xs font-semibold uppercase text-black/50">Feriados nacionais (pré-cadastrados)</h2>
+            <div className="flex flex-col gap-2 rounded-lg border border-black/10 bg-white p-2">
+              {nationalHolidays.map((holiday) => (
+                <div
+                  key={holiday.id}
+                  className="flex items-center justify-between rounded-md bg-black/[0.02] px-3 py-2 text-sm"
                 >
-                  <IconTrash size={16} />
-                </button>
-              </div>
-            ))}
-            {customHolidays.length === 0 && (
-              <p className="px-3 py-4 text-center text-sm text-black/40">Nenhum feriado personalizado ainda.</p>
-            )}
-          </div>
-
-          <div className="mt-3 flex items-end gap-3 rounded-lg border border-black/10 bg-white p-4">
-            <Input
-              id="newHolidayDate"
-              label="Data"
-              type="date"
-              variant="light"
-              value={newDate}
-              onChange={(e) => setNewDate(e.target.value)}
-            />
-            <div className="flex-1">
-              <Input
-                id="newHolidayDescription"
-                label="Descrição"
-                variant="light"
-                value={newDescription}
-                onChange={(e) => setNewDescription(e.target.value)}
-              />
+                  <span className="w-24 shrink-0 text-black/60">{formatDate(holiday.date)}</span>
+                  <span className="flex-1 text-black">{holiday.description}</span>
+                  <span className="text-black/30" title="Feriado nacional — não pode ser removido">
+                    🔒
+                  </span>
+                </div>
+              ))}
+              {nationalHolidays.length === 0 && (
+                <p className="px-3 py-4 text-center text-sm text-black/40">Nenhum feriado nacional.</p>
+              )}
             </div>
-            <button
-              type="button"
-              onClick={handleAdd}
-              disabled={!newDate || !newDescription.trim()}
-              className="rounded-md bg-black/10 px-4 py-2 text-sm font-medium text-black hover:bg-black/15 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              Adicionar feriado
-            </button>
           </div>
+
+          <div>
+            <h2 className="mb-2 text-xs font-semibold uppercase text-black/50">Feriados personalizados</h2>
+            <div className="flex flex-col gap-2 rounded-lg border border-black/10 bg-white p-2">
+              {customHolidays.map((holiday) => (
+                <div
+                  key={holiday.id}
+                  className="flex items-center justify-between rounded-md bg-blue-50 px-3 py-2 text-sm"
+                >
+                  <span className="w-24 shrink-0 text-black/60">{formatDate(holiday.date)}</span>
+                  <span className="flex-1 text-black">{holiday.description}</span>
+                  <button
+                    type="button"
+                    onClick={() => handleRemove(holiday.id)}
+                    className="text-black/40 hover:text-red-600"
+                  >
+                    <IconTrash size={16} />
+                  </button>
+                </div>
+              ))}
+              {customHolidays.length === 0 && (
+                <p className="px-3 py-4 text-center text-sm text-black/40">Nenhum feriado personalizado ainda.</p>
+              )}
+            </div>
+
+            <div className="mt-3 flex items-end gap-3 rounded-lg border border-black/10 bg-white p-4">
+              <Input
+                id="newHolidayDate"
+                label="Data"
+                type="date"
+                variant="light"
+                value={newDate}
+                onChange={(e) => setNewDate(e.target.value)}
+              />
+              <div className="flex-1">
+                <Input
+                  id="newHolidayDescription"
+                  label="Descrição"
+                  variant="light"
+                  value={newDescription}
+                  onChange={(e) => setNewDescription(e.target.value)}
+                />
+              </div>
+              <button
+                type="button"
+                onClick={handleAdd}
+                disabled={!newDate || !newDescription.trim()}
+                className="rounded-md bg-black/10 px-4 py-2 text-sm font-medium text-black hover:bg-black/15 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                Adicionar feriado
+              </button>
+            </div>
+          </div>
+
+          {error && <p className="text-sm text-red-500">{error}</p>}
+
+          <Button onClick={handleSave} isLoading={saving} className="self-start">
+            {saving ? "Salvando..." : "Salvar calendário"}
+          </Button>
         </div>
-
-        {error && <p className="text-sm text-red-500">{error}</p>}
-
-        <Button onClick={handleSave} isLoading={saving} className="self-start">
-          {saving ? "Salvando..." : "Salvar calendário"}
-        </Button>
       </div>
     </div>
   );

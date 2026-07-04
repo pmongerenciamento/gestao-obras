@@ -12,6 +12,7 @@ export interface RawStudy {
   project_id: string;
   name: string;
   start_date: string;
+  duration_months: number | null;
   created_at: string;
 }
 
@@ -63,6 +64,7 @@ export function mapStudy(raw: RawStudy): Study {
     projectId: raw.project_id,
     name: raw.name,
     startDate: raw.start_date,
+    durationMonths: raw.duration_months,
     createdAt: raw.created_at,
   };
 }

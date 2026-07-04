@@ -70,7 +70,7 @@ async def get_project_owner_id(conn: asyncpg.connection.Connection, project_id: 
 
 async def list_studies(conn: asyncpg.connection.Connection, project_id: UUID) -> list[asyncpg.Record]:
     return await conn.fetch(
-        "select id, project_id, name, start_date, created_at from sim_studies "
+        "select id, project_id, name, start_date, duration_months, created_at from sim_studies "
         "where project_id = $1 order by created_at desc",
         project_id,
     )
@@ -78,7 +78,7 @@ async def list_studies(conn: asyncpg.connection.Connection, project_id: UUID) ->
 
 async def get_study(conn: asyncpg.connection.Connection, study_id: UUID) -> asyncpg.Record | None:
     return await conn.fetchrow(
-        "select id, project_id, name, start_date, created_at from sim_studies where id = $1",
+        "select id, project_id, name, start_date, duration_months, created_at from sim_studies where id = $1",
         study_id,
     )
 
@@ -122,12 +122,17 @@ async def get_wbs_overrides(conn: asyncpg.connection.Connection, study_id: UUID)
 
 
 async def create_study(
-    conn: asyncpg.connection.Connection, project_id: UUID, name: str, start_date: date
+    conn: asyncpg.connection.Connection,
+    project_id: UUID,
+    name: str,
+    start_date: date,
+    duration_months: int,
 ) -> UUID:
     async with conn.transaction():
         study_id = await conn.fetchval(
-            "insert into sim_studies (project_id, name, start_date) values ($1, $2, $3) returning id",
-            project_id, name, start_date,
+            "insert into sim_studies (project_id, name, start_date, duration_months) "
+            "values ($1, $2, $3, $4) returning id",
+            project_id, name, start_date, duration_months,
         )
         national_holidays = generate_national_holidays(start_date.year, _HOLIDAY_YEARS_WINDOW)
         for holiday_date, description in national_holidays:
