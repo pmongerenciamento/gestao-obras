@@ -188,3 +188,19 @@
     - Teste do módulo com os sócios.
     - Itens mais antigos ainda em aberto: módulo de importação no frontend (`POST /api/v1/upload` já pronto no backend, ainda sem UI), `POST/GET/PATCH /api/v1/projects` no backend (gap desde o item 40).
     - Fora de escopo, registrado pra depois: tipos de dependência além de finish-to-start (SS/FF/FS+lag) na WBS, persistir estado de recolher/expandir da árvore.
+
+## Sessão 2026-07-04 — Ajustes finais do Pré-planejamento e aprovação pro primeiro teste com sócios
+
+75. **Migration `009_sim_studies_duration.sql`**: coluna `duration_months` (integer, nullable — não quebra cenários já existentes) em `sim_studies`. Aplicada direto no Supabase real via `asyncpg`/`DATABASE_URL` (porta 5432 alcançável desta vez, diferente da limitação de rede relatada no item 32; confirmação separada do usuário antes de rodar o `ALTER TABLE`).
+76. **Campo "Prazo estimado (meses)" no modal "Novo cenário"** (`NewStudyModal.tsx`): terceiro campo obrigatório, número de meses. Fluxo completo: `CreateStudyRequest`/`StudyOut` (backend, `Field(gt=0)`), `Study`/`CreateStudyInput` (frontend), `pre-planejamento-mappers.ts`, `createStudy()`.
+77. **Banner de período na aba Calendário** (`HolidayCalendar.tsx`, acima do mini-calendário/feriados): "Período do cenário: [início] → [término]" (término calculado a partir de `duration_months`, cenários antigos sem esse dado mostram "prazo não informado") + "Feriados gerados de [ano] a [ano]" (calculado a partir dos próprios feriados nacionais já persistidos, não de uma constante fixa no frontend).
+78. **Botão "Replicar torre" adicionado na aba "Serviços e lotes"** (`CyclesGrid.tsx`): antes só existia na aba "Estrutura WBS" (item 71), escondido atrás de um menu "⋯" e só visível pra torres que já tinham ao menos um ciclo preenchido — por isso o usuário reportou que "sumiu". Agora também aparece como ícone de cópia no label vertical de cada grupo/torre em "Serviços e lotes", duplicando pavimentos + durações localmente (mesmo padrão de "+ Grupo"/"+ Pavimento" — só grava no banco ao clicar "Salvar", diferente da versão da Estrutura WBS que salva na hora).
+79. **Edição inline do nome do grupo/torre** (`CyclesGrid.tsx`, label vertical): clique no nome vira `<input>`, Enter ou clicar fora (blur) salva (renomeia o grupo e todos os pavimentos vinculados), Esc cancela. Nome vazio ou colidindo com outro grupo já existente é recusado (evita fundir dois grupos sem querer). Não existia nenhum componente de "clique-para-editar" no projeto até agora (pesquisado antes de implementar) — padrão novo, sem reaproveitar código existente.
+80. **Bug de ambiente recorrente**: cache `.next` corrompido de novo (mesma causa do item 72 — processo `next dev` zumbi ocupando a porta 3000 de uma sessão anterior). Resolvido matando o processo (`Stop-Process`) e apagando `.next` antes de subir um servidor novo limpo.
+81. **Módulo Pré-planejamento aprovado para o primeiro teste com os sócios**, com os ajustes 75-79 acima concluídos e validados via `tsc --noEmit` + `eslint` (sem `claude-in-chrome`, regra do item 66).
+82. Commits: `8c242e2` (prazo estimado + banner de período + replicar torre em "Serviços e lotes" + migration 009), `640c371` (edição inline do nome do grupo/torre).
+83. **Pendências para a próxima sessão**:
+    - Validação visual completa de ponta a ponta ainda não feita nesta sessão (regra do item 66 — só `tsc`/`eslint`); depende do teste real com os sócios.
+    - Feedback do primeiro teste com os sócios (a ser incorporado assim que acontecer).
+    - Itens mais antigos ainda em aberto: módulo de importação no frontend (`POST /api/v1/upload` já pronto no backend, ainda sem UI), `POST/GET/PATCH /api/v1/projects` no backend (gap desde o item 40).
+    - Fora de escopo, registrado pra depois: tipos de dependência além de finish-to-start (SS/FF/FS+lag) na WBS, persistir estado de recolher/expandir da árvore.
