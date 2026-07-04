@@ -1,90 +1,11 @@
-import type { Cycle, Floor, Holiday, Predecessor, Service, Study, StudyDetail } from "@/types/pre-planejamento";
+import type { Study, StudyDetail } from "@/types/pre-planejamento";
 import { apiFetch } from "@/lib/api/backend-client";
+import { mapStudy, mapStudyDetail, type RawStudy, type RawStudyDetail } from "@/lib/api/pre-planejamento-mappers";
 import { createClient } from "@/lib/supabase/server";
 
 // Leitura server-side (sessão via cookie), mesmo padrão de lib/api/users.ts.
 // Escrita fica em lib/api/pre-planejamento-mutations.ts (client-side), mesma
 // separação de user-mutations.ts.
-
-interface RawStudy {
-  id: string;
-  project_id: string;
-  name: string;
-  start_date: string;
-  created_at: string;
-}
-
-interface RawService {
-  id: string;
-  name: string;
-  color: string;
-  order_index: number;
-  lag_days: number;
-}
-
-interface RawFloor {
-  id: string;
-  group_name: string;
-  floor_name: string;
-  order_index: number;
-}
-
-interface RawCycle {
-  id: string;
-  service_id: string;
-  floor_id: string;
-  duration_days: number;
-}
-
-interface RawHoliday {
-  id: string;
-  date: string;
-  description: string;
-  is_national: boolean;
-}
-
-interface RawPredecessor {
-  cycle_id: string;
-  predecessor_id: string;
-}
-
-interface RawStudyDetail extends RawStudy {
-  services: RawService[];
-  floors: RawFloor[];
-  cycles: RawCycle[];
-  holidays: RawHoliday[];
-  predecessors: RawPredecessor[];
-}
-
-function mapStudy(raw: RawStudy): Study {
-  return {
-    id: raw.id,
-    projectId: raw.project_id,
-    name: raw.name,
-    startDate: raw.start_date,
-    createdAt: raw.created_at,
-  };
-}
-
-function mapService(raw: RawService): Service {
-  return { id: raw.id, name: raw.name, color: raw.color, orderIndex: raw.order_index, lagDays: raw.lag_days };
-}
-
-function mapFloor(raw: RawFloor): Floor {
-  return { id: raw.id, groupName: raw.group_name, floorName: raw.floor_name, orderIndex: raw.order_index };
-}
-
-function mapCycle(raw: RawCycle): Cycle {
-  return { id: raw.id, serviceId: raw.service_id, floorId: raw.floor_id, durationDays: raw.duration_days };
-}
-
-function mapHoliday(raw: RawHoliday): Holiday {
-  return { id: raw.id, date: raw.date, description: raw.description, isNational: raw.is_national };
-}
-
-function mapPredecessor(raw: RawPredecessor): Predecessor {
-  return { cycleId: raw.cycle_id, predecessorId: raw.predecessor_id };
-}
 
 async function getAccessToken(): Promise<string | null> {
   const supabase = await createClient();
@@ -109,14 +30,7 @@ export async function getStudy(projectId: string, estudoId: string): Promise<Stu
       `/api/v1/pre-planejamento/${projectId}/estudos/${estudoId}`,
       token,
     );
-    return {
-      ...mapStudy(raw),
-      services: raw.services.map(mapService),
-      floors: raw.floors.map(mapFloor),
-      cycles: raw.cycles.map(mapCycle),
-      holidays: raw.holidays.map(mapHoliday),
-      predecessors: raw.predecessors.map(mapPredecessor),
-    };
+    return mapStudyDetail(raw);
   } catch {
     return null;
   }

@@ -2,9 +2,11 @@ import type {
   CreateStudyInput,
   SaveCyclesInput,
   SaveWbsOverridesInput,
+  StudyDetail,
   UpdateStudyInput,
 } from "@/types/pre-planejamento";
 import { apiFetch } from "@/lib/api/backend-client";
+import { mapStudyDetail, type RawStudyDetail } from "@/lib/api/pre-planejamento-mappers";
 import { createClient } from "@/lib/supabase/client";
 
 // Escrita client-side, mesmo padrão de lib/api/user-mutations.ts — quem chama
@@ -54,13 +56,18 @@ export async function deleteStudy(projectId: string, estudoId: string): Promise<
   await apiFetch(`/api/v1/pre-planejamento/${projectId}/estudos/${estudoId}`, token, { method: "DELETE" });
 }
 
+// Devolvem o StudyDetail atualizado (o PUT do backend já devolve isso) —
+// permite encadear outra ação (ex.: "Replicar torre" resolve os ids dos
+// ciclos novos e já manda os predecessores remapeados) sem esperar um
+// próximo GET/router.refresh().
+
 export async function saveCycles(
   projectId: string,
   estudoId: string,
   input: SaveCyclesInput,
-): Promise<void> {
+): Promise<StudyDetail> {
   const token = await getAccessToken();
-  await apiFetch(`/api/v1/pre-planejamento/${projectId}/estudos/${estudoId}/ciclos`, token, {
+  const raw = await apiFetch<RawStudyDetail>(`/api/v1/pre-planejamento/${projectId}/estudos/${estudoId}/ciclos`, token, {
     method: "PUT",
     body: JSON.stringify({
       services: input.services.map((s) => ({
@@ -83,21 +90,27 @@ export async function saveCycles(
       })),
     }),
   });
+  return mapStudyDetail(raw);
 }
 
 export async function saveWbsOverrides(
   projectId: string,
   estudoId: string,
   input: SaveWbsOverridesInput,
-): Promise<void> {
+): Promise<StudyDetail> {
   const token = await getAccessToken();
-  await apiFetch(`/api/v1/pre-planejamento/${projectId}/estudos/${estudoId}/predecessores`, token, {
-    method: "PUT",
-    body: JSON.stringify({
-      overrides: input.overrides.map((o) => ({
-        cycle_id: o.cycleId,
-        predecessor_ids: o.predecessorIds,
-      })),
-    }),
-  });
+  const raw = await apiFetch<RawStudyDetail>(
+    `/api/v1/pre-planejamento/${projectId}/estudos/${estudoId}/predecessores`,
+    token,
+    {
+      method: "PUT",
+      body: JSON.stringify({
+        overrides: input.overrides.map((o) => ({
+          cycle_id: o.cycleId,
+          predecessor_ids: o.predecessorIds,
+        })),
+      }),
+    },
+  );
+  return mapStudyDetail(raw);
 }
