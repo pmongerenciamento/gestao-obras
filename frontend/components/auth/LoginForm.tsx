@@ -22,6 +22,7 @@ export function LoginForm() {
     const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
 
     if (signInError) {
+      console.error(signInError); // TODO: remover após diagnosticar falha de login em produção
       setError("E-mail ou senha inválidos.");
       setLoading(false);
       return;
