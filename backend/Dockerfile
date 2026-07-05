@@ -7,10 +7,10 @@ RUN apt-get update && apt-get install -y \
 
 WORKDIR /app
 
-COPY requirements.txt .
+COPY backend/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY . .
+COPY backend/ .
 
 ENV JAVA_HOME=/usr/lib/jvm/default-java
 ENV PORT=8000
