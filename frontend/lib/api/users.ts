@@ -41,6 +41,8 @@ export function mapUser(raw: RawUser): User {
 }
 
 export async function listUsers(): Promise<User[]> {
+  if (!process.env.NEXT_PUBLIC_API_URL) return [];
+
   const supabase = await createClient();
   const {
     data: { session },
