@@ -15,4 +15,4 @@ COPY backend/ .
 ENV JAVA_HOME=/usr/lib/jvm/default-java
 ENV PORT=8000
 
-CMD uvicorn app.main:app --host 0.0.0.0 --port $PORT
+CMD python -c "import os; print('SUPABASE_URL:', os.environ.get('SUPABASE_URL', 'NOT SET')); print('DATABASE_URL:', 'SET' if os.environ.get('DATABASE_URL') else 'NOT SET')" && uvicorn app.main:app --host 0.0.0.0 --port $PORT
