@@ -6,6 +6,7 @@ no mesmo padrão usado para a JVM do MPXJ (ver app/infra/mpxj/jvm.py).
 from __future__ import annotations
 
 import logging
+import ssl
 
 import asyncpg
 
@@ -22,7 +23,10 @@ async def init_pool() -> None:
     if _pool is not None:
         return
     settings = get_settings()
-    _pool = await asyncpg.create_pool(dsn=settings.database_url)
+    ssl_context = ssl.create_default_context()
+    ssl_context.check_hostname = False
+    ssl_context.verify_mode = ssl.CERT_NONE
+    _pool = await asyncpg.create_pool(dsn=settings.database_url, ssl=ssl_context)
     logger.info("Pool asyncpg iniciado")
 
 
