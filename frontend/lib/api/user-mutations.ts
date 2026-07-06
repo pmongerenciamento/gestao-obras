@@ -17,6 +17,8 @@ async function getAccessToken(): Promise<string> {
 }
 
 export async function createUser(input: CreateUserInput): Promise<void> {
+  if (!process.env.NEXT_PUBLIC_API_URL) throw new Error("Backend indisponível.");
+
   const token = await getAccessToken();
   await apiFetch("/api/v1/users", token, {
     method: "POST",
@@ -33,6 +35,8 @@ export async function updateUser(
   action: UserAction,
   projectId?: string,
 ): Promise<void> {
+  if (!process.env.NEXT_PUBLIC_API_URL) throw new Error("Backend indisponível.");
+
   const token = await getAccessToken();
   await apiFetch(`/api/v1/users/${userId}`, token, {
     method: "PATCH",
@@ -41,11 +45,15 @@ export async function updateUser(
 }
 
 export async function deleteUser(userId: string): Promise<void> {
+  if (!process.env.NEXT_PUBLIC_API_URL) throw new Error("Backend indisponível.");
+
   const token = await getAccessToken();
   await apiFetch(`/api/v1/users/${userId}`, token, { method: "DELETE" });
 }
 
 export async function grantAccess(userId: string, projectId: string): Promise<void> {
+  if (!process.env.NEXT_PUBLIC_API_URL) throw new Error("Backend indisponível.");
+
   const token = await getAccessToken();
   await apiFetch(`/api/v1/users/${userId}`, token, {
     method: "PATCH",
@@ -76,6 +84,8 @@ export async function uploadAvatar(file: File): Promise<string> {
 }
 
 export async function setAvatar(userId: string, avatarUrl: string): Promise<void> {
+  if (!process.env.NEXT_PUBLIC_API_URL) throw new Error("Backend indisponível.");
+
   const token = await getAccessToken();
   await apiFetch(`/api/v1/users/${userId}`, token, {
     method: "PATCH",

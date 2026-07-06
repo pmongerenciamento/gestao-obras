@@ -23,6 +23,8 @@ async function getAccessToken(): Promise<string> {
 }
 
 export async function createStudy(projectId: string, input: CreateStudyInput): Promise<string> {
+  if (!process.env.NEXT_PUBLIC_API_URL) throw new Error("Backend indisponível.");
+
   const token = await getAccessToken();
   const raw = await apiFetch<{ id: string }>(`/api/v1/pre-planejamento/${projectId}/estudos`, token, {
     method: "POST",
@@ -40,6 +42,8 @@ export async function updateStudy(
   estudoId: string,
   input: UpdateStudyInput,
 ): Promise<void> {
+  if (!process.env.NEXT_PUBLIC_API_URL) throw new Error("Backend indisponível.");
+
   const token = await getAccessToken();
   await apiFetch(`/api/v1/pre-planejamento/${projectId}/estudos/${estudoId}`, token, {
     method: "PUT",
@@ -56,6 +60,8 @@ export async function updateStudy(
 }
 
 export async function deleteStudy(projectId: string, estudoId: string): Promise<void> {
+  if (!process.env.NEXT_PUBLIC_API_URL) throw new Error("Backend indisponível.");
+
   const token = await getAccessToken();
   await apiFetch(`/api/v1/pre-planejamento/${projectId}/estudos/${estudoId}`, token, { method: "DELETE" });
 }
@@ -70,6 +76,8 @@ export async function saveCycles(
   estudoId: string,
   input: SaveCyclesInput,
 ): Promise<StudyDetail> {
+  if (!process.env.NEXT_PUBLIC_API_URL) throw new Error("Backend indisponível.");
+
   const token = await getAccessToken();
   const raw = await apiFetch<RawStudyDetail>(`/api/v1/pre-planejamento/${projectId}/estudos/${estudoId}/ciclos`, token, {
     method: "PUT",
@@ -102,6 +110,8 @@ export async function saveWbsOverrides(
   estudoId: string,
   input: SaveWbsOverridesInput,
 ): Promise<StudyDetail> {
+  if (!process.env.NEXT_PUBLIC_API_URL) throw new Error("Backend indisponível.");
+
   const token = await getAccessToken();
   const raw = await apiFetch<RawStudyDetail>(
     `/api/v1/pre-planejamento/${projectId}/estudos/${estudoId}/predecessores`,
