@@ -16,6 +16,8 @@ async function getAccessToken(): Promise<string | null> {
 }
 
 export async function listStudies(projectId: string): Promise<Study[]> {
+  if (!process.env.NEXT_PUBLIC_API_URL) return [];
+
   const token = await getAccessToken();
   if (!token) return [];
   const raw = await apiFetch<RawStudy[]>(`/api/v1/pre-planejamento/${projectId}/estudos`, token);
@@ -23,6 +25,8 @@ export async function listStudies(projectId: string): Promise<Study[]> {
 }
 
 export async function getStudy(projectId: string, estudoId: string): Promise<StudyDetail | null> {
+  if (!process.env.NEXT_PUBLIC_API_URL) return null;
+
   const token = await getAccessToken();
   if (!token) return null;
   try {
