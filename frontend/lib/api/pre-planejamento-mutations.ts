@@ -7,11 +7,20 @@ import type {
 } from "@/types/pre-planejamento";
 import { apiFetch } from "@/lib/api/backend-client";
 import { mapStudyDetail, type RawStudyDetail } from "@/lib/api/pre-planejamento-mappers";
+import { generateNationalHolidays } from "@/lib/pre-planejamento/holidays";
 import { createClient } from "@/lib/supabase/client";
 
 // Escrita client-side, mesmo padrão de lib/api/user-mutations.ts — quem chama
 // recarrega via router.refresh() depois (o Server Component pai refaz o
 // fetch de getStudy/listStudies e repassa props atualizadas pra baixo).
+//
+// createStudy/updateStudy/deleteStudy vão direto no Supabase (RLS de
+// sim_studies/sim_holidays já cobre "é dono do projeto?", mesmo padrão de
+// lib/api/projects.ts) — não dependem do backend FastAPI. saveCycles e
+// saveWbsOverrides continuam via apiFetch: fazem upsert reconciliador
+// multi-tabela numa única transação Postgres (ver
+// backend/app/domain/pre_planejamento/repository.py), que o cliente Supabase
+// não reproduz com segurança em várias chamadas sequenciais sem transação.
 
 async function getAccessToken(): Promise<string> {
   const supabase = createClient();
@@ -23,18 +32,29 @@ async function getAccessToken(): Promise<string> {
 }
 
 export async function createStudy(projectId: string, input: CreateStudyInput): Promise<string> {
-  if (!process.env.NEXT_PUBLIC_API_URL) throw new Error("Backend indisponível.");
+  const supabase = createClient();
 
-  const token = await getAccessToken();
-  const raw = await apiFetch<{ id: string }>(`/api/v1/pre-planejamento/${projectId}/estudos`, token, {
-    method: "POST",
-    body: JSON.stringify({
+  const { data, error } = await supabase
+    .from("sim_studies")
+    .insert({
+      project_id: projectId,
       name: input.name,
       start_date: input.startDate,
       duration_months: input.durationMonths,
-    }),
-  });
-  return raw.id;
+    })
+    .select("id")
+    .single();
+  if (error || !data) throw error ?? new Error("Falha ao criar o cenário.");
+
+  const startYear = Number(input.startDate.slice(0, 4));
+  const holidays = generateNationalHolidays(startYear);
+  const { error: holidaysError } = await supabase.from("sim_holidays").upsert(
+    holidays.map((h) => ({ study_id: data.id, date: h.date, description: h.description, is_national: true })),
+    { onConflict: "study_id,date", ignoreDuplicates: true },
+  );
+  if (holidaysError) throw holidaysError;
+
+  return data.id;
 }
 
 export async function updateStudy(
@@ -42,28 +62,35 @@ export async function updateStudy(
   estudoId: string,
   input: UpdateStudyInput,
 ): Promise<void> {
-  if (!process.env.NEXT_PUBLIC_API_URL) throw new Error("Backend indisponível.");
+  const supabase = createClient();
 
-  const token = await getAccessToken();
-  await apiFetch(`/api/v1/pre-planejamento/${projectId}/estudos/${estudoId}`, token, {
-    method: "PUT",
-    body: JSON.stringify({
-      name: input.name,
-      start_date: input.startDate,
-      holidays: input.holidays.map((h) => ({
+  const { error: updateError } = await supabase
+    .from("sim_studies")
+    .update({ name: input.name, start_date: input.startDate })
+    .eq("id", estudoId)
+    .eq("project_id", projectId);
+  if (updateError) throw updateError;
+
+  const { error: deleteError } = await supabase.from("sim_holidays").delete().eq("study_id", estudoId);
+  if (deleteError) throw deleteError;
+
+  if (input.holidays.length > 0) {
+    const { error: insertError } = await supabase.from("sim_holidays").insert(
+      input.holidays.map((h) => ({
+        study_id: estudoId,
         date: h.date,
         description: h.description,
         is_national: h.isNational,
       })),
-    }),
-  });
+    );
+    if (insertError) throw insertError;
+  }
 }
 
 export async function deleteStudy(projectId: string, estudoId: string): Promise<void> {
-  if (!process.env.NEXT_PUBLIC_API_URL) throw new Error("Backend indisponível.");
-
-  const token = await getAccessToken();
-  await apiFetch(`/api/v1/pre-planejamento/${projectId}/estudos/${estudoId}`, token, { method: "DELETE" });
+  const supabase = createClient();
+  const { error } = await supabase.from("sim_studies").delete().eq("id", estudoId).eq("project_id", projectId);
+  if (error) throw error;
 }
 
 // Devolvem o StudyDetail atualizado (o PUT do backend já devolve isso) —
