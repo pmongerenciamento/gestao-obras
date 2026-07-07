@@ -270,3 +270,23 @@
      - Índice composto em `snapshots (project_id, is_baseline)` e `(project_id, reference_month)` (hoje só `idx_snapshots_project_id`).
      - Revisão aprofundada das policies RLS (todas as 7 tabelas escritas direto pelo frontend — `projects`, `sim_studies`, `sim_services`, `sim_floors`, `sim_cycles`, `sim_holidays`, `sim_wbs_overrides` — usam `for all`, cobrindo SELECT/INSERT/UPDATE/DELETE com a mesma regra; RLS virou a linha de defesa real nesses caminhos, não só padrão de consistência, ver item 108a).
      - Limpeza de `pending_imports` expirados (tabela tem `expires_at` mas nenhum job/cron remove linhas vencidas).
+
+## Sessão 2026-07-07 — Análise de concorrente — Controle Sua Obra
+
+111. **Esclarecimento sobre o modelo de negócio do gestao-obras**: o objetivo **não** é vender o sistema como ferramenta/SaaS por enquanto — antes disso, todas as camadas de segurança (RLS, autenticação, isolamento de dados entre clientes) precisam ser validadas (ver pendência do item 108a). O sistema serve como **apoio interno pro time da PMON prestar o serviço de gerenciamento de obras**, tanto local (indo até a obra) quanto remoto (atendendo qualquer empresa no Brasil) — é ferramenta de trabalho da equipe, não produto vendido ao cliente final.
+112. **Referência de concorrente — controlesuaobra.com.br**: conceitos e telas observados, pra eventual inspiração de UX/funcionalidade (não de modelo de negócio, ver item 111):
+     - Sidebar vertical só-ícone (sem alternância expandir/colapsar).
+     - Estrutura de abas dentro do projeto, mais granular que a nossa: Dashboard | Longo Prazo | Restrições | Semanal | Medições | Orçamentos | Suprimentos | Histograma (hoje temos só Pré-planejamento e Linha de Balanço/LOB juntos, ver `lib/project-modules.ts`).
+     - Dentro de "Longo Prazo": 3 visualizações do mesmo cronograma — Gantt, Linha de Balanço, e **Escadinha** (tabela compacta com células coloridas por data/pavimento — formato que não temos).
+     - Conceitos do **Last Planner System** que eles usam e nós não:
+       - PPC (Percent Plan Complete) — métrica semanal de comprometido vs. executado.
+       - Restrições (constraint log) — identificar impeditivos antes de comprometer uma tarefa na semana.
+       - Farol de suprimentos — indicador visual tipo semáforo de risco de atraso por material.
+       - Histograma de mão de obra — picos/ociosidade de equipe ao longo do tempo.
+     - Cadastro de obra com 3 métodos de início de cronograma: manual, importação (MS Project/Excel — já temos os dois), e **geração por IA** a partir do tipo/escopo da obra (não temos — relacionado ao "macrofluxo pré-cadastrado por tipologia" já listado como melhoria pendente).
+113. **Decisão tomada nesta sessão**: a sidebar do gestao-obras (`components/layout/ProjectSidebar.tsx`) vai adotar o padrão **"sempre-ícone + tooltip on-hover"** (delay ~150-200ms) em vez do modelo expandido/colapsado que tinha sido planejado antes. Ainda não implementado — só a decisão de design registrada.
+114. **Avaliar no futuro (não decidido, só registrado como possibilidade)**:
+     - Abrir "Restrições" como conceito/tela própria (Last Planner constraint log).
+     - PPC como métrica automática na aba Semanal.
+     - Farol de suprimentos como visão simplificada, complementar à tabela detalhada de Cronograma de Suprimentos.
+     - Geração de macrofluxo por IA na criação de projeto novo.
