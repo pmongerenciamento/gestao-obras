@@ -11,10 +11,10 @@ import { NextResponse, type NextRequest } from "next/server";
 // (sb-<ref>-auth-token.0, .1, ...) quando o valor é grande — por isso
 // startsWith no prefixo, não igualdade exata do nome.
 
-const SESSION_COOKIE_PREFIX = "sb-ttqtefwntkgpgatrcyps-auth-token";
+const SESSION_COOKIE_PATTERN = /^sb-.*-auth-token/;
 
 function hasSupabaseSession(request: NextRequest): boolean {
-  return request.cookies.getAll().some((cookie) => cookie.name.startsWith(SESSION_COOKIE_PREFIX));
+  return request.cookies.getAll().some((cookie) => SESSION_COOKIE_PATTERN.test(cookie.name));
 }
 
 export function middleware(request: NextRequest) {
