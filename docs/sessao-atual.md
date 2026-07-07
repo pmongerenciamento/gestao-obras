@@ -270,3 +270,41 @@
      - Índice composto em `snapshots (project_id, is_baseline)` e `(project_id, reference_month)` (hoje só `idx_snapshots_project_id`).
      - Revisão aprofundada das policies RLS (todas as 7 tabelas escritas direto pelo frontend — `projects`, `sim_studies`, `sim_services`, `sim_floors`, `sim_cycles`, `sim_holidays`, `sim_wbs_overrides` — usam `for all`, cobrindo SELECT/INSERT/UPDATE/DELETE com a mesma regra; RLS virou a linha de defesa real nesses caminhos, não só padrão de consistência, ver item 108a).
      - Limpeza de `pending_imports` expirados (tabela tem `expires_at` mas nenhum job/cron remove linhas vencidas).
+
+## Sessão 2026-07-07 — Migrations 011-015 (Clientes/CRM), ambiente de staging, bug de middleware corrigido
+
+111. **Migrations `011` a `015` criadas em `backend/migrations/`** (branch `feature/clientes-crm`, ainda não mergeada em `main`), todas aditivas com rollback documentado no cabeçalho de cada arquivo:
+     - `011_create_clients.sql`: tabela `clients` (code único, legal_name, cnpj nullable, dados de contato).
+     - `012_create_service_types.sql`: tabela `service_types` + 5 seeds (`SVC-001` a `SVC-005`, sendo `SVC-005` "Outros" com `requires_manual_description = true`).
+     - `013_alter_projects_add_client.sql`: `projects.client_id`/`project_code` + índice único composto `(client_id, project_code)` parcial (só quando ambos não nulos — projetos antigos sem cliente continuam sem restrição).
+     - `014_create_billing_entities.sql`: tabela `billing_entities` (SPE), `project_id` único (1 SPE por projeto).
+     - `015_create_teams.sql`: tabelas `teams`/`team_members` (`partner_tier` com CHECK `founding`/`associate`, unique `(team_id, profile_id)`), `projects.team_id`, `profiles.system_role` (texto livre, sem CHECK).
+112. **Validação em 2 rodadas**:
+     - Primeiro em transação com `ROLLBACK` contra o Supabase de **produção** (13/13 sub-testes passaram — constraints de unicidade, CHECK e nullable comportando exatamente como esperado; confirmado por leitura pós-rollback que o schema real voltou ao estado anterior, nada persistido).
+     - Depois aplicadas de verdade (`COMMIT`) no projeto de **staging** (ver item 113) e re-testadas sem rollback: 14/14 sub-testes passaram (mesmo conjunto de testes + seed de dados reais criados em staging pra exercitar as FKs).
+113. **Projeto Supabase de staging criado** (ref `gesqstdtbbdhlravddhd`), separado de produção:
+     - `frontend/.env.staging` e `backend/.env.staging` criados (gitignorados via `.env.*` do `.gitignore` raiz) — senha do banco de staging URL-encoded (`urllib.parse.quote`) por conter caracteres especiais.
+     - Schema completo (`001` a `015`) aplicado do zero em staging, incluindo bootstrap de dado de teste (3 usuários no Auth + projetos/clients/team_members) necessário pra exercitar as FKs de `profiles`/`projects.owner_id`.
+     - `dotenv-cli` instalado como devDependency + script `"dev:staging": "dotenv -e .env.staging -- next dev"` no `frontend/package.json` — Next.js não carrega `.env.staging` automaticamente, e o log `Environments: .env.local` no boot é só informativo (lista arquivos `.env*` encontrados), não indica qual valor vence; confirmado por teste direto que os valores de staging realmente sobrepõem os de `.env.local`.
+     - Backend local (`uvicorn`) apontado pro Postgres de staging via variáveis de ambiente exportadas no shell antes de subir o processo (`DATABASE_URL`/`SUPABASE_URL`/`SUPABASE_SERVICE_ROLE_KEY` de `backend/.env.staging`) — `backend/.env` de produção nunca foi tocado.
+     - Usuário `diego@pmongerenciamento.com.br` já existia no Auth de staging (criado manualmente antes desta sessão); senha temporária redefinida via Admin API só pra teste.
+114. **BUG DE PRODUÇÃO ENCONTRADO E CORRIGIDO — `middleware.ts`**: o nome do cookie de sessão estava hardcoded com o ref do projeto Supabase de produção (`sb-ttqtefwntkgpgatrcyps-auth-token`, `startsWith`), em vez de um padrão genérico. Nunca deu problema em produção porque só existia um projeto/ref; ao testar contra staging (ref diferente), o login ficava preso em "Entrando..." — a sessão era criada com sucesso no Supabase Auth (confirmado via chamada direta ao endpoint `/auth/v1/token`, 200 com token válido), mas o middleware nunca reconhecia o cookie e revertia o redirect de volta pra `/login` silenciosamente (sem erro de JS).
+     - Corrigido pra regex `/^sb-.*-auth-token/`, compatível com qualquer ref de projeto. Validado (sem abrir navegador — só requisições HTTP diretas simulando os nomes de cookie): sem cookie → redireciona pra `/login` (307); cookie de staging (inteiro e fatiado `.0`) → passa (200); cookie de produção → continua passando (200, sem regressão).
+     - Commit `b151e40` na branch `feature/clientes-crm` (junto com `dotenv-cli`/script `dev:staging` do item 113).
+115. **Decisões de arquitetura (CRM/Clientes, Fase 1 — resumo; detalhe completo no planejamento anterior)**:
+     - Cliente = grupo/portfólio (N projetos, N SPEs).
+     - SPE vinculada ao projeto, não ao cliente (`billing_entities.project_id` único).
+     - Funil de vendas simplificado: prospect → proposta → negociação → fechamento, sem tabela de "oportunidade" separada — reaproveita `clients`/`projects` em estágio de rascunho.
+     - Rateio de despesas fica no lançamento/recorrência (não em regra fixa por cliente/projeto).
+     - Time = centro de custo: Diego/Murillo `founding`, Carlos/Weslley `associate`.
+116. **Pendências para a próxima sessão**:
+     - Tela de Clientes (UI) ainda não implementada — só schema e mockup visual validados.
+     - Teste de regressão completo em staging (cadastro de projeto + Linha de Balanço) ainda não refeito depois do fix do middleware — só o login foi reconfirmado (item 114).
+     - PR de `feature/clientes-crm` → `main` ainda não aberto.
+     - Tabelas de Propostas, SPE (schema de `billing_entities` já existe, sem UI), Reembolsos, CRM em geral — ainda sem código, só desenho/planejamento.
+     - Itens mais antigos ainda em aberto: módulo de importação no frontend, `POST/GET/PATCH /api/v1/projects` no backend (gap desde o item 40), estratégia de backend Railway (item 104/108c).
+117. **Não fazer ainda** (registrado explicitamente pelo usuário):
+     - Não aplicar migrations `011-015` em produção.
+     - Não mergear `feature/clientes-crm` em `main`.
+     - Não trocar a senha do banco de produção agora (adiado por decisão do Diego até o sistema estar mais maduro).
+     - Não remover o comentário residual em `middleware.ts` que ainda menciona `startsWith` (cosmético, não afeta funcionamento — texto do comentário não foi atualizado quando a implementação virou regex).
