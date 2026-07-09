@@ -340,3 +340,38 @@
      - Não aplicar migrations `016-023` em produção.
      - Não mergear `feature/clientes-crm` em `main`.
      - Não trocar a senha do banco de produção (decisão adiada por Diego, mesma pendência do item 117).
+
+## Sessão 2026-07-09 — Módulo CRM completo (dashboard, pipeline, fechamento de negócio)
+
+127. **IMPLEMENTADO** — migrations 024-029 criadas, testadas (transação com rollback) e aplicadas em staging, mais o frontend do módulo CRM inteiro:
+     - **Migration 024**: leitura de `projects` liberada pro módulo CRM (visão cross-owner pro funil/ranking — sem isso, cada usuário só via os próprios projetos).
+     - **Migration 025**: `profile_display_name()` — nome de exibição com fallback pro e-mail, via RPC `security definer`.
+     - **Migration 026**: `project_stage_history` — histórico automático de tempo em cada etapa do funil, via triggers de INSERT e UPDATE em `projects.pipeline_stage` (pendência técnica registrada no item 129).
+     - **Migration 027**: escrita em `projects` liberada pro módulo CRM (necessário pro drag-and-drop mover `pipeline_stage` de projetos que não são do usuário logado).
+     - **Migration 028**: campos jurídicos em `clients` (`address`, `legal_rep_name`/`cpf`/`role`) + `contracts.signed_date`.
+     - **Migration 029**: função `close_deal()` — fechamento de negócio atômico (atualiza cliente, cria SPE, gera contrato a partir da proposta, marca proposta aceita, projeto `fechado_ganho`), `security definer` com checagem de permissão interna.
+     - **Tela inicial (home) pós-login**: saudação, data por extenso, grid de módulos filtrado por `profile_modules`, mural e Espaço PMON estáticos (TODO pra versão dinâmica futura).
+     - **Dashboard CRM** (`/crm`): 5 KPIs do mês, funil de vendas, ranking por owner (Diego/Murillo).
+     - **Pipeline** (`/crm/pipeline`): board kanban por `pipeline_stage`, criar novo prospect (cliente novo ou existente, código sugerido automaticamente), drag-and-drop nas 3 primeiras colunas (prospect/proposta/negociação — Fechado não aceita drop, só via botão dedicado).
+     - **Aba "Comercial"** dentro da tela de projeto (visível só pra quem tem módulo CRM): criar proposta, mover pra negociação, marcar como perdido, e Fechar (ganho) completo — formulário de dados jurídicos do cliente + SPE + time responsável, chamando `close_deal()`.
+     - **Filtro em `/projetos`** (Engenharia): só mostra projetos `fechado_ganho` ou legado (`pipeline_stage` null) — prospects/propostas/perdidos ficam só em `/crm/pipeline`.
+128. **Decisões de arquitetura**:
+     - Card do pipeline navega direto pra aba Comercial do projeto (não pra Visão Geral de Engenharia) — contexto certo vindo do CRM.
+     - Código do contrato = número de versão da proposta (`lpad` 2 dígitos), não digitado manualmente.
+     - `close_deal()` é uma função atômica no banco (não múltiplas chamadas do frontend) — evita escrita parcial se algo falhar no meio do fechamento.
+129. **Bugs encontrados e corrigidos**:
+     - `lib/api/crm.ts` teve `PIPELINE_STAGES` duplicado (import novo + declaração local antiga) numa tentativa de edição rejeitada que parcialmente aplicou — corrigido.
+     - `frontend/app/(app)/page.tsx` precisou ser reescrito via terminal (`rm` + heredoc) depois de tentativas de Edit/Write concatenarem conteúdo antigo com novo repetidamente.
+     - `close_deal()` (migration 029) inicialmente não tinha `contracts.signed_date` (coluna não existia ainda) — pego antes de aplicar, migration 028 ajustada.
+     - Card do pipeline levava pra Visão Geral de Engenharia em vez da aba Comercial — corrigido (ver item 128).
+     - `project_stage_history` (migration 026) quebra com `NotNullViolationError` se `pipeline_stage` for setado null via UPDATE — não corrigido por não ser caminho real do app hoje (guard sugerido: `if new.pipeline_stage is null then return new;`).
+130. **Pendente / próximos passos**:
+     - Reembolso (próximo módulo grande, ainda não iniciado).
+     - Visual da tela inicial (home) — funcional mas não refinado.
+     - Seed de `profile_modules` pros outros 5 (Murillo/Carlos/Weslley/Camila/Thiago) — só em produção quando as migrations forem aplicadas lá.
+     - PR de `feature/clientes-crm` → `main` ainda não aberto (muitas migrations acumuladas: 011-029).
+     - Trigger de `project_stage_history` não trata `pipeline_stage=null` em UPDATE (ver item 129).
+131. **Não fazer ainda** (registrado explicitamente pelo usuário):
+     - Não aplicar nenhuma migration em produção.
+     - Não mergear `feature/clientes-crm` em `main`.
+     - Não trocar a senha do banco de produção.
