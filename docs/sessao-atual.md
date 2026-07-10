@@ -375,3 +375,115 @@
      - Não aplicar nenhuma migration em produção.
      - Não mergear `feature/clientes-crm` em `main`.
      - Não trocar a senha do banco de produção.
+
+## Sessão 2026-07-10 — Arquitetura do módulo Financeiro (Folha PJ, Contas a Pagar/Receber, Documentos)
+
+132. **Contexto**: revisão do Anexo I (planilha de apuração mensal real, 
+     modelo usado hoje pra gerar a NF de colaboradores PJ como Camila) e 
+     da aba DEPESAS do Controle_Portfólio_PMON.xlsx — achado crítico: o 
+     campo "CENTRO DE CUSTO" da planilha real está 0% preenchido (0 de 
+     1.734 linhas), nunca foi usado na prática; quem categoriza despesa 
+     de fato é a coluna PROJETO (48% das linhas) + "00 PMON" como bucket 
+     interno (32% das linhas). Isso motivou a revisão completa do 
+     desenho de centro de custo feito na sessão anterior.
+
+133. **Princípio arquitetural adotado** (validado por pesquisa em 
+     multidimensional accounting — Dynamics 365, Sage Intacct — e prática 
+     de DRE gerencial brasileira): toda despesa carrega duas dimensões 
+     independentes, nunca uma no lugar da outra — Categoria (natureza: 
+     "o que é") e Projeto (job: "pra quem foi", nullable). Rateio por 
+     time (Carlos/Weslley/Diego-Murillo) é uma terceira dimensão 
+     ortogonal, via regra nomeada e reutilizável.
+
+134. **Dois mecanismos de remuneração coexistem, não confundir**:
+     - Sócios (Carlos, Weslley, Diego, Murillo): distribuição de lucro 
+       por portfólio (15% mensal / 35% pool de investimento único da 
+       PMON / 50% pool combinado Diego+Murillo, split manual entre os 
+       dois no ato).
+     - Colaboradores PJ (Camila, Thiago): remuneração fixa por projeto + 
+       reembolsos aprovados do período + pró-labore mínimo — modelo do 
+       Anexo I, com aditivo contratual quando o valor muda.
+
+135. **Schema desenhado (não implementado ainda — só arquitetura)**:
+     - `expense_categories` (renomeia `cost_centers` de ontem) — 
+       categoria/natureza da despesa, com hierarquia opcional 
+       (parent_category_id).
+     - `allocation_rules` + `allocation_rule_splits` — generaliza e 
+       substitui `team_cost_allocations` (de ontem): regras de rateio 
+       nomeadas e editáveis numa tela central (junto com cadastro de 
+       usuários/privilégios), escolhidas no momento do lançamento (não 
+       inferidas automaticamente, exceto Reembolso que continua 
+       escolhendo sozinho por trás dos panos com base em quem lançou). 
+       Cada lançamento grava o `allocation_rule_id` vigente no momento — 
+       mudar a regra depois não altera lançamentos passados, só os 
+       futuros.
+     - `expenses` (despesas gerais, nova) — category_id, project_id 
+       (nullable), vendor_name, competencia_month (regime de 
+       competência) + due_date/payment_date (regime de caixa), value, 
+       allocation_rule_id, status.
+     - `contract_scopes` (dentro de `contracts`) e `proposal_scopes` 
+       (dentro de `proposals`, nasce desde a negociação) — resolve o 
+       caso "1 contrato, 1 NF única, múltiplos serviços indo pra 
+       portfólios diferentes" (ex: The Gardens: Gerenciamento de Prazo → 
+       Carlos, Gerenciamento de Custo → Diego). Divisão de receita por 
+       escopo numa parcela é calculada no relatório, não gravada em 
+       tabela nova.
+     - `contract_installments` — parcelas projetadas na criação do 
+       contrato (não mês a mês), com `is_revision_point` marcando onde 
+       cai o aniversário de reajuste INCC; ao confirmar reajuste, só as 
+       parcelas futuras recalculam, passadas ficam como histórico.
+     - `vendor_contracts` (generaliza o que seria `service_intake_contracts`) 
+       — cobre aluguel, contabilidade, e contratos de tomada de serviço 
+       PJ (Camila/Thiago) na mesma base: vendor_name, cnpj, contract_type, 
+       category_id, monthly_value, vigência, withholding_percentage 
+       (nullable — retenção de IR, ex: aluguel).
+     - `vendor_contract_amendments` — histórico de aditivo (mudança de 
+       valor), mesmo padrão de vigência já usado em outras tabelas do 
+       sistema.
+     - `personnel_contract_details` — só quando contract_type='pessoal_pj', 
+       vincula o vendor_contract a um profile_id (a pessoa).
+     - `vendor_contract_installments` — espelho de `contract_installments` 
+       do lado da despesa: pré-lançamento de despesas recorrentes futuras 
+       (aluguel, contabilidade, PJ) pra permitir a mesma projeção anual 
+       de fluxo de caixa que já existe do lado da receita.
+     - Retenção de imposto (ex: DARF IRRF sobre aluguel): 1 lançamento 
+       de despesa com withholding_percentage gera automaticamente 2 
+       linhas em `expenses` — o valor líquido pro fornecedor e o valor 
+       retido pra Receita Federal (categoria própria, vencimento no dia 
+       do DARF).
+     - Documentos: Google Drive pessoal (pmongerenciamento@gmail.com, 
+       Google One 1TB) como camada de armazenamento de arquivos gerados 
+       pelo sistema (NF, boleto, comprovante, e futuramente MS Project/
+       fotos/planilhas também) — via OAuth pessoal (não Workspace), 
+       escopo de permissão restrito a `drive.file` (só arquivos que o 
+       app cria), tela de consentimento em modo Teste. Risco assumido 
+       conscientemente: integração atrelada à conta pessoal do Diego, 
+       não a uma conta corporativa.
+
+136. **Fluxo de aprovação da Folha PJ**: demonstrativo mensal (projeto + 
+     reembolso aprovado + pró-labore mínimo + comissões/deduções manuais) 
+     só é gerado depois que TODOS os reembolsos do período estiverem 
+     aprovados — bloqueia até resolver pendência, não gera com aviso.
+
+137. **Decisões de nomenclatura**: `contracts` = contrato de prestação de 
+     serviço (PMON → cliente, receita). `vendor_contracts` = contrato de 
+     tomada de serviço (fornecedor/PJ → PMON, despesa). Nomes 
+     propositalmente diferentes pra evitar confusão futura entre os 
+     dois sentidos jurídicos opostos.
+
+138. **Comissões e Deduções** (campos do Anexo I hoje sempre zerados): 
+     ficam como campo de ajuste manual (descrição + valor) no 
+     demonstrativo, sem tabela própria — raramente usados na prática.
+
+139. **Pendências técnicas identificadas, não bloqueantes**:
+     - Arredondamento em divisão percentual entre escopos: o último 
+       escopo deve absorver a sobra de centavo, pra soma das partes 
+       sempre bater com o total exato.
+     - Confirmar com o contador se o percentual de retenção de IR do 
+       contrato de aluguel específico da PMON bate com a regra padrão da 
+       Receita antes de automatizar o cálculo.
+
+140. **Nada disso foi implementado ainda** — sessão inteira foi de 
+     arquitetura/discussão, sem nenhuma migration ou código novo. 
+     Próximo passo será começar a implementação a partir deste desenho, 
+     em ordem a definir na próxima sessão.
