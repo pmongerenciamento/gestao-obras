@@ -290,3 +290,7 @@
      - PPC como métrica automática na aba Semanal.
      - Farol de suprimentos como visão simplificada, complementar à tabela detalhada de Cronograma de Suprimentos.
      - Geração de macrofluxo por IA na criação de projeto novo.
+
+## Sessão 2026-07-09 — Módulo CRM (dashboard, pipeline drag-and-drop, aba Comercial)
+
+115. **PENDÊNCIA TÉCNICA DE BAIXA PRIORIDADE — não corrigir agora**: a trigger `log_pipeline_stage_change()` (`backend/migrations/026_project_stage_history.sql`) quebra com `NotNullViolationError` se `projects.pipeline_stage` for setado pra `null` via UPDATE — ela sempre insere `new.pipeline_stage` em `project_stage_history.stage`, coluna `not null`. Confirmado ao vivo em staging tentando resetar um projeto de teste pra `null` (rollback automático da própria statement, sem corromper dado nenhum). Não é um problema hoje porque nenhum caminho do app tenta setar `pipeline_stage` pra `null` — só rows legadas (criadas antes da coluna existir, migration 022) têm esse valor, e não passam pela trigger por já estarem gravadas assim. Ajuste sugerido pra quando isso virar necessário de verdade: guard `if new.pipeline_stage is null then return new;` no início da função.
