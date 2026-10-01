@@ -13,7 +13,7 @@ export default async function NewProjectPage() {
   return (
     <>
       <Header
-        breadcrumb={[{ label: "Projetos", href: "/" }, { label: "Novo projeto" }]}
+        breadcrumb={[{ label: "Projetos", href: "/projetos" }, { label: "Novo projeto" }]}
         userEmail={user?.email}
       />
       <NewProjectForm />

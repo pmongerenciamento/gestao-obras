@@ -24,7 +24,7 @@ export default async function UsersPage() {
 
   return (
     <div className="flex min-h-screen flex-col">
-      <Header breadcrumb={[{ label: "Projetos", href: "/" }, { label: "Usuários" }]} userEmail={user?.email} />
+      <Header breadcrumb={[{ label: "Projetos", href: "/projetos" }, { label: "Usuários" }]} userEmail={user?.email} />
       <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col px-6 py-8">
         <UserTable users={users} projects={projectOptions} />
       </main>

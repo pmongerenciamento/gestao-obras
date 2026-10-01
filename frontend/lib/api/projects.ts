@@ -39,9 +39,13 @@ export async function listProjects(): Promise<ProjectSummary[]> {
     data: { user },
   } = await supabase.auth.getUser();
 
+  // Lista de Engenharia: só projetos "de verdade" (fechado_ganho) ou antigos
+  // (pipeline_stage null, criados antes da coluna existir — backend/migrations/022).
+  // Prospects/proposta/negociação/perdido ficam só em /crm/pipeline, não aqui.
   const { data, error } = await supabase
     .from("projects")
     .select("id, name, client_name, city, image_url")
+    .or("pipeline_stage.eq.fechado_ganho,pipeline_stage.is.null")
     .order("created_at", { ascending: false });
 
   if (error || !data) return [];

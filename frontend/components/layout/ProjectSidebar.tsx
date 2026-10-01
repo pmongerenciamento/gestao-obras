@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { IconHome } from "@tabler/icons-react";
+import { IconHome, IconBriefcase } from "@tabler/icons-react";
 import type { ProjectDetail } from "@/types/project";
 import { PROJECT_MODULES } from "@/lib/project-modules";
 
@@ -18,9 +18,10 @@ function formatDate(iso: string | null) {
 interface ProjectSidebarProps {
   project: ProjectDetail;
   projectId: string;
+  hasCrmAccess: boolean;
 }
 
-export function ProjectSidebar({ project, projectId }: ProjectSidebarProps) {
+export function ProjectSidebar({ project, projectId, hasCrmAccess }: ProjectSidebarProps) {
   const pathname = usePathname();
   const overviewHref = `/projetos/${projectId}`;
 
@@ -31,6 +32,7 @@ export function ProjectSidebar({ project, projectId }: ProjectSidebarProps) {
       label: m.label,
       icon: m.icon,
     })),
+    ...(hasCrmAccess ? [{ href: `${overviewHref}/comercial`, label: "Comercial", icon: IconBriefcase }] : []),
   ];
 
   return (
