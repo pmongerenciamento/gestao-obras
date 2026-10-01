@@ -9,6 +9,9 @@ export function AdminBar() {
       <Link href="/usuarios" className="hover:text-black/70">
         Gerenciar usuários
       </Link>
+      <Link href="/clientes" className="hover:text-black/70">
+        Gerenciar clientes
+      </Link>
       <span className="cursor-not-allowed hover:text-black/70">Configurações</span>
     </div>
   );
