@@ -39,6 +39,19 @@ export async function createReport(input: NewReportInput): Promise<string> {
 
 export async function createItem(reportId: string, input: NewItemInput): Promise<void> {
   const supabase = createSupabaseClient();
+  const profileId = await getCurrentUserId();
+
+  // Rateio automático e invisível ao usuário (não vira campo no NewItemForm):
+  // resolve a regra de rateio padrão do time de quem lançou, substituindo a
+  // lógica antiga baseada em team_cost_allocations. A função
+  // default_allocation_rule_for_profile (migration 035) devolve null se o
+  // profile não tiver time — nesse caso grava null e o rateio fica a resolver.
+  const { data: allocationRuleId, error: ruleError } = await supabase.rpc(
+    "default_allocation_rule_for_profile",
+    { p_profile_id: profileId },
+  );
+
+  if (ruleError) throw ruleError;
 
   const { error } = await supabase.from("reimbursement_items").insert({
     report_id: reportId,
@@ -53,6 +66,7 @@ export async function createItem(reportId: string, input: NewItemInput): Promise
     other_amount: input.otherAmount ?? 0,
     requires_preapproval: input.requiresPreapproval,
     total_amount: input.totalAmount,
+    allocation_rule_id: allocationRuleId ?? null,
   });
 
   if (error) throw error;
