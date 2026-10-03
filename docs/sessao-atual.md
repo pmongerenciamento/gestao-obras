@@ -345,3 +345,24 @@ PENDENTE: código Python que consulta a API do Inter (extrato), preenche bank_tr
 - Rate limits confirmados: token 5 chamadas/min, extrato 10 chamadas/min.
 
 PENDENTE: gravar as transações em bank_transactions (usando external_id como chave de deduplicação), e o matching por nível de confiança contra expenses (schema já pronto desde a migration 038).
+
+## Sessão 2026-10-04 (continuação) — Diagnóstico de produção e migration 039 (vulnerabilidade no catálogo de permissões)
+
+- Diagnóstico somente leitura (transação READ ONLY, só catálogo, nenhum dado) comparando produção (ttqtefwntkgpgatrcyps) com staging (que tem 001-038), via marcador por migration + diff completo de tabelas/colunas/funções/policies/triggers.
+- Conexão: o DATABASE_URL de produção no backend/.env local usava a conexão direta (db.ttqtefwntkgpgatrcyps.supabase.co), que não resolve mais daqui (IPv6-only) — trocado pro Session Pooler (aws-1-sa-east-1.pooler.supabase.com:5432, usuário postgres.ttqtefwntkgpgatrcyps), mesma senha. URL antiga guardada em backend/.env.bak-direct-url (gitignored, contém senha — apagar quando não precisar mais).
+- ESTADO REAL DE PRODUÇÃO: migrations 001-009 aplicadas, SEM a 006; nada de 011 em diante (não existe arquivo 010 — é a pendência do item 110). 15 tabelas em produção, todas também presentes em staging; nenhuma tabela/coluna/policy/trigger do public existe só em produção. Não há supabase_migrations.schema_migrations em nenhum dos dois — os marcadores são a única fonte de verdade do que está aplicado.
+- 3 DIVERGÊNCIAS encontradas:
+  1. 006 faltando em produção (policies avatar_images_* do storage), apesar do bucket avatar-images existir — upload de avatar em produção provavelmente bloqueado hoje. 007-009 aplicadas, então a 006 foi pulada.
+  2. Event trigger ensure_rls → rls_auto_enable() (ddl_command_end) só em produção: liga RLS automaticamente em toda tabela nova. Staging não tem.
+  3. Policies de storage project_images_owner_update/_owner_write/_public_read só em produção — criadas manualmente no SQL Editor (item 35), não estão em nenhum arquivo de migration. Staging não tem essas policies nem bucket nenhum.
+- VULNERABILIDADE REAL encontrada e corrigida (migration 039_fix_catalog_rls_privileges.sql): modules/permissions/resources (criadas na 023) estavam com RLS desligado em staging e com os grants padrão do Supabase (anon e authenticated com SELECT/INSERT/UPDATE/DELETE) — qualquer um com a chave anon pública conseguia, via API REST e sem login, reescrever o catálogo de permissões (p.ex. dar can_write em expenses/bank_transactions a qualquer módulo). Achado ao testar as premissas no banco antes de escrever a migration, não assumido: a proposta inicial era DESLIGAR o RLS dessas tabelas em produção (premissa: has_permission() quebraria com RLS ligado), mas a checagem mostrou que has_permission() roda como postgres (dono, bypassrls=true, sem force RLS) e funciona nos dois casos — e que desligar o RLS teria aberto a mesma brecha em produção.
+  - 039: liga RLS nas 3 tabelas, policy de SELECT pra authenticated (using true), revoke all de anon. Escrita no catálogo só por migration/painel.
+  - Testada em staging em transação com rollback: antes, anon executou INSERT em resources e UPDATE/DELETE nas 19 linhas de permissions (dentro de savepoints desfeitos); depois, anon bloqueado em tudo (inclusive leitura), authenticated lê as 3 tabelas mas não escreve (INSERT recusado, UPDATE/DELETE afetam 0 linhas), has_permission() idêntico antes/depois (26/26). Limitação: staging só tem 1 perfil com módulo, com acesso a tudo — nenhum caso "false" exercitado.
+  - Aplicada em staging via COMMIT real (82e8210). Em produção deve entrar logo depois da 023.
+- DECISÃO: Diego autorizou rodar migrations futuras direto em produção, já que o sistema ainda não está em uso por usuários reais. Staging volta a ser ambiente de teste pré-aplicação quando o sistema entrar em produção de verdade.
+
+PENDENTE:
+- Aplicar em produção da 011 à 039 (039 logo após a 023).
+- Decidir se a 006 entra junto.
+- Decidir se as policies de project-images viram migration (pra repositório e staging refletirem produção).
+- Apagar backend/.env.bak-direct-url.
