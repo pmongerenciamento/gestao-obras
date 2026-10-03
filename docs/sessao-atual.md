@@ -294,3 +294,31 @@
 ## Sessão 2026-07-09 — Módulo CRM (dashboard, pipeline drag-and-drop, aba Comercial)
 
 115. **PENDÊNCIA TÉCNICA DE BAIXA PRIORIDADE — não corrigir agora**: a trigger `log_pipeline_stage_change()` (`backend/migrations/026_project_stage_history.sql`) quebra com `NotNullViolationError` se `projects.pipeline_stage` for setado pra `null` via UPDATE — ela sempre insere `new.pipeline_stage` em `project_stage_history.stage`, coluna `not null`. Confirmado ao vivo em staging tentando resetar um projeto de teste pra `null` (rollback automático da própria statement, sem corromper dado nenhum). Não é um problema hoje porque nenhum caminho do app tenta setar `pipeline_stage` pra `null` — só rows legadas (criadas antes da coluna existir, migration 022) têm esse valor, e não passam pela trigger por já estarem gravadas assim. Ajuste sugerido pra quando isso virar necessário de verdade: guard `if new.pipeline_stage is null then return new;` no início da função.
+
+## Sessão 2026-10-03 — Fase A/B do Financeiro, infraestrutura Banco Inter
+
+IMPLEMENTADO (migrations 034-037, todas aplicadas em staging com COMMIT real, testadas em transação com rollback antes):
+- 034: allocation_rules + allocation_rule_splits (generaliza o rateio fixo de team_cost_allocations pra regras nomeadas e editáveis). Rename cost_centers → expense_categories.
+- 035: função default_allocation_rule_for_profile() — resolve a regra de rateio automática a partir do time de quem lança a despesa.
+- 036: deprecia team_cost_allocations (comentário + revoga escrita, mantém leitura histórica — tabela órfã, confirmado via varredura de código).
+- 037: núcleo de Contas a Pagar — expenses (despesas gerais, com trigger updated_at), vendor_contracts + vendor_contract_amendments + personnel_contract_details (contratos de tomada de serviço, incluindo PJ como Camila/Thiago), RLS restrita ao módulo financeiro.
+- Código: createItem (Reembolso) ajustado pra chamar default_allocation_rule_for_profile() e gravar allocation_rule_id automaticamente, sem campo editável no formulário.
+
+INFRAESTRUTURA DESTRAVADA:
+- Projeto Supabase de staging (gesqstdtbbdhlravddhd) estava pausado (plano free) — reativado. Conexão direta (IPv6-only) não resolve mais via IPv4 — .env.staging local migrado pro Session Pooler (aws-1-us-west-2.pooler.supabase.com:5432).
+- Projeto Supabase de PRODUÇÃO (ttqtefwntkgpgatrcyps) também estava pausado — reativado.
+- Railway: trial expirado, projeto "gestao-obras" (backend Python) nunca tinha ficado online de fato. Upgrade pro plano Hobby ($5/mês) feito. DATABASE_URL de produção no Railway migrado pro Session Pooler (aws-1-sa-east-1.pooler.supabase.com:5432) — healthcheck passou, backend de produção está ONLINE pela primeira vez.
+- Integração Banco Inter criada no portal developers.inter.co: escopo só "Saldo e Extrato" (leitura), sem Pagamentos/Cobranças/Pix. Credenciais salvas como variáveis de ambiente no Railway: BANCO_INTER_CLIENT_ID, BANCO_INTER_CLIENT_SECRET, BANCO_INTER_CERT_BASE64, BANCO_INTER_KEY_BASE64 (certificado e chave mTLS convertidos pra base64 via PowerShell, nunca passaram em texto puro por git/chat).
+
+DADOS REAIS — EM ANDAMENTO:
+- Planilha Levantamento_Financeiro_PMON.xlsx enviada pra Vanessa (financeiro) preencher: Empresas Faturadas, Contratos e Regras (incluindo correção INCC, cobrança de deslocamento à parte), Fornecedores Recorrentes. E-mail orientativo enviado junto.
+
+PENDENTE / PRÓXIMOS PASSOS:
+- Escrever o código Python (backend) que decodifica as variáveis base64 de volta pra arquivo de certificado, autentica via OAuth2+mTLS com o Inter, e consulta extrato — nada disso foi escrito ainda, só a infraestrutura/credenciais.
+- Aguardar planilha preenchida pela Vanessa + contratos/últimas NFs.
+- Frontend do núcleo de Contas a Pagar (telas de lançar despesa / cadastrar vendor_contract) — schema pronto (037), UI não iniciada.
+- Considerar revogar e regerar o Client Secret do Banco Inter (passou em texto puro por uma captura de tela no chat durante a configuração — risco baixo mas registrado).
+
+NÃO FAZER AINDA:
+- Não aplicar nenhuma migration em produção (continuam só em staging).
+- Não usar as credenciais do Banco Inter antes do código de integração existir e ser testado.
