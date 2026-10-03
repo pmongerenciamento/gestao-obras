@@ -1,7 +1,7 @@
 """Integração com a API do Banco Inter (escopo só "Saldo e Extrato").
 
-Por enquanto só autenticação: OAuth2 client_credentials com mTLS. Consulta
-de extrato e gravação em bank_transactions ficam pra depois.
+Autenticação (OAuth2 client_credentials com mTLS) e consulta de extrato.
+Gravação em bank_transactions fica pra depois.
 
 Especificação conferida em https://developers.inter.co/references/token:
   - POST https://cdpj.partners.bancointer.com.br/oauth/v2/token
@@ -18,6 +18,9 @@ import base64
 import os
 import tempfile
 import time
+from datetime import date
+from decimal import Decimal
+from typing import Any
 
 import httpx
 
@@ -25,6 +28,15 @@ from app.core.config import get_settings
 
 TOKEN_URL = "https://cdpj.partners.bancointer.com.br/oauth/v2/token"
 SCOPE = "extrato.read"
+
+# /extrato/completo e não /extrato: só o completo traz idTransacao (vira
+# external_id) e CPF/CNPJ da contraparte (dentro de "detalhes").
+# Período máximo de 90 dias; rate limit 10 chamadas/minuto.
+EXTRATO_URL = "https://cdpj.partners.bancointer.com.br/banking/v2/extrato/completo"
+_EXTRATO_PAGE_SIZE = 1000
+_EXTRATO_MAX_DAYS = 90
+
+_TYPE_BY_OPERACAO = {"C": "credito", "D": "debito"}
 
 # Renova o token um pouco antes de expirar, pra não usar um token que vence
 # no meio de uma requisição.
@@ -120,3 +132,94 @@ async def get_access_token() -> str:
     expires_in = float(body.get("expires_in", 3600))
     _cached_token_expires_at = time.monotonic() + expires_in - _TOKEN_EXPIRY_MARGIN_SECONDS
     return _cached_token
+
+
+def _invalidate_token() -> None:
+    global _cached_token, _cached_token_expires_at
+    _cached_token = None
+    _cached_token_expires_at = 0.0
+
+
+def _counterparty(tx: dict[str, Any]) -> tuple[str | None, str | None]:
+    """Documento e nome da contraparte: quem pagou num crédito, quem recebeu
+    num débito. Os nomes dos campos variam por tipo de transação (Pix,
+    transferência, boleto, pagamento); tarifa/cashback não têm documento.
+    """
+    detalhes = tx.get("detalhes") or {}
+    if tx.get("tipoOperacao") == "C":
+        document = detalhes.get("cpfCnpjPagador") or detalhes.get("cpfCnpj")
+        name = (
+            detalhes.get("nomePagador")
+            or detalhes.get("nomeEmpresaPagador")
+            or detalhes.get("nome")
+        )
+    else:
+        document = detalhes.get("cpfCnpjRecebedor") or detalhes.get("cpfCnpj")
+        name = (
+            detalhes.get("nomeRecebedor")
+            or detalhes.get("nomeEmpresaRecebedor")
+            or detalhes.get("nomeDestinatario")
+        )
+    return document or None, name or None
+
+
+def _normalize(tx: dict[str, Any]) -> dict[str, Any]:
+    """Converte uma transação do Inter pros campos de bank_transactions."""
+    document, name = _counterparty(tx)
+    return {
+        "external_id": tx["idTransacao"],
+        "transaction_date": date.fromisoformat(tx["dataTransacao"]),
+        "value": Decimal(tx["valor"]),
+        "type": _TYPE_BY_OPERACAO[tx["tipoOperacao"]],
+        "payer_document": document,
+        "payer_name": name,
+        "description": tx.get("descricao") or tx.get("titulo"),
+        "raw_payload": tx,
+    }
+
+
+async def _fetch_extrato_page(
+    client: httpx.AsyncClient, data_inicio: date, data_fim: date, pagina: int
+) -> dict[str, Any]:
+    params = {
+        "dataInicio": data_inicio.isoformat(),
+        "dataFim": data_fim.isoformat(),
+        "pagina": pagina,
+        "tamanhoPagina": _EXTRATO_PAGE_SIZE,
+    }
+
+    async def _get() -> httpx.Response:
+        token = await get_access_token()
+        return await client.get(
+            EXTRATO_URL, params=params, headers={"Authorization": f"Bearer {token}"}
+        )
+
+    response = await _get()
+    if response.status_code == 401:
+        # Token expirou entre o cache e a chamada (raro): renova uma vez.
+        _invalidate_token()
+        response = await _get()
+    response.raise_for_status()
+    return response.json()
+
+
+async def get_extrato(data_inicio: date, data_fim: date) -> list[dict[str, Any]]:
+    """Consulta o extrato do período (datas inclusivas, máximo 90 dias) e
+    devolve as transações já normalizadas pros campos de bank_transactions.
+    Não grava nada no banco.
+    """
+    if data_fim < data_inicio:
+        raise ValueError("data_fim anterior a data_inicio")
+    if (data_fim - data_inicio).days > _EXTRATO_MAX_DAYS:
+        raise ValueError(f"Período maior que {_EXTRATO_MAX_DAYS} dias")
+
+    raw: list[dict[str, Any]] = []
+    pagina = 0
+    async with httpx.AsyncClient(cert=get_client_cert_files(), timeout=30.0) as client:
+        while True:
+            body = await _fetch_extrato_page(client, data_inicio, data_fim, pagina)
+            raw.extend(body.get("transacoes") or [])
+            if body.get("ultimaPagina", True):
+                break
+            pagina += 1
+    return [_normalize(tx) for tx in raw]
