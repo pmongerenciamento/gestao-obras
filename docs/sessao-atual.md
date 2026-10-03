@@ -333,3 +333,15 @@ NÃO FAZER AINDA:
 - Client Secret do Banco Inter (configurado ontem) permanece sem rotação — avaliado como baixo risco (API exige mTLS, certificado/chave nunca expostos) e Inter não oferece botão de regenerar secret isoladamente, só recriar a integração inteira.
 
 PENDENTE: código Python que consulta a API do Inter (extrato), preenche bank_transactions, e faz o matching por nível de confiança contra expenses/contract_installments (quando existir).
+
+## Sessão 2026-10-04 (continuação) — Integração Banco Inter: autenticação e consulta de extrato
+
+- backend/app/integrations/banco_inter.py:
+  - get_access_token() — OAuth2 client_credentials com mTLS (certificado e chave decodificados de BANCO_INTER_CERT_BASE64/KEY_BASE64, gravados em arquivo temporário). Token cacheado em memória, renovado perto de expirar (margem de 60s). Testado com a API real: token emitido com sucesso, escopo extrato.read, validade 3600s.
+  - get_extrato(data_inicio, data_fim) — consulta GET /extrato/completo (não o /extrato simples, que não traz idTransacao nem CPF/CNPJ da contraparte). Paginação de 1000 por página, máximo 90 dias por chamada (limite da API). Normaliza cada transação pros campos de bank_transactions (external_id, transaction_date, value, type, payer_document, payer_name, description, raw_payload).
+  - _counterparty(): pagador nos créditos, recebedor nos débitos (opção escolhida — é quem temos interesse de identificar em cada caso).
+- Testado com dado real: 60 dias, 100 transações (44 créditos/56 débitos), sem corte de paginação (confirmado via diagnóstico de metadados). 93 de 100 com contraparte identificada — as 7 sem contraparte são OUTROS/INVESTIMENTO/PAGAMENTO (tributos e contas de consumo pagos por código de barras não trazem CPF/CNPJ do Inter — comportamento esperado da API, não bug nosso). Essas vão precisar de matching por valor+data+descrição na etapa de conciliação, não por documento.
+- Rota temporária /api/v1/banco-inter/test-extrato (só usuário master, retorna agregados — quantidade/totais — nunca transação individual). Será removida quando a sincronização de verdade existir.
+- Rate limits confirmados: token 5 chamadas/min, extrato 10 chamadas/min.
+
+PENDENTE: gravar as transações em bank_transactions (usando external_id como chave de deduplicação), e o matching por nível de confiança contra expenses (schema já pronto desde a migration 038).
