@@ -370,18 +370,18 @@ PENDENTE:
 ## Sessão 2026-10-04 (continuação) — Aplicação de 011-041 em produção
 
 - DECISÃO: Diego autorizou aplicar migrations direto em produção daqui pra frente (sistema ainda sem usuários reais). Staging volta a ser ambiente de teste pré-aplicação quando houver uso real.
-- Aplicadas em produção, uma a uma, cada uma testada em transação com rollback antes: 006 (estava faltando), 011 até 039 (incluindo as 15 migrations do CRM/Reembolso/Financeiro desta e das sessões anteriores), 040 e 041.
+- Aplicadas em produção, uma a uma, cada uma testada em transação com rollback antes: 006 (estava faltando), 011 até 039 (todas as do CRM, Reembolso e Financeiro), 040 e 041.
 - 3 projetos de teste (Projeto_Teste_Carlos/Weslley/Murillo, criados 2026-07-05) excluídos de produção, incluindo um estudo de pré-planejamento completo do Murillo (3 serviços, 8 pavimentos, 24 ciclos, 45 feriados, 22 ajustes) — confirmado como dado de teste descartável antes de apagar.
 - VULNERABILIDADES REAIS encontradas e corrigidas durante a aplicação:
   - 040: profile_display_name() (025) executável por anon sem login, revelando nome/e-mail de qualquer usuário a partir do id (ids descobríveis via bucket público avatar-images). Corrigido: revoke de anon + search_path fixo.
   - 041: close_deal() (029) e default_allocation_rule_for_profile() (035) também executáveis por anon (close_deal já se protegia internamente via has_permission(); a outra não, revelando o time de qualquer usuário). Ao tentar fixar search_path='' nelas, o teste em staging pegou um efeito cascata: has_permission() e has_module_access() (chamadas por close_deal) não têm search_path próprio e herdam o de quem as chama — com search_path vazio, close_deal quebrava com "relation profile_modules does not exist". Corrigido incluindo has_permission()/has_module_access() na mesma migration, com search_path fixo e nomes qualificados (public.*).
-  - Testado com 120 combinações de permissão (4 perfis × 13 recursos × read/write + 4 módulos) idênticas antes/depois, fluxo completo de close_deal (incluindo os 2 triggers de histórico de pipeline) idêntico antes/depois.
+  - Testado com 120 combinações de permissão (4 perfis × 13 recursos × read/write + 4 módulos) idênticas antes/depois, fluxo completo de close_deal (incluindo os 2 triggers de histórico de pipeline) idêntico antes/depois (em produção, o mesmo teste rodou com 3 perfis, todas false porque ninguém tem módulo lá; o caso true foi coberto pelo fluxo da close_deal).
 - Divergências entre produção e staging que SEGUEM existindo (não vêm das nossas migrations, documentadas, não bloqueantes):
   - Event trigger rls_auto_enable (RLS automático do Supabase) só em produção — staging não tem.
   - 3 policies de storage project_images_* criadas manualmente no SQL Editor, só em produção — nunca viraram migration formal.
 
 PENDENTE:
-- profile_modules e team_members vazias em produção — ninguém tem acesso a módulo nenhum até popular manualmente ou via painel.
+- profile_modules vazia: ninguém tem acesso a módulo nenhum; team_members vazia: rateio padrão vira 50/50 pra todos — popular as duas manualmente ou via painel.
 - Defeito antigo (não desta sessão): close_deal() falha se a proposta não tiver service_type_id (contract_label fica null). Corrigir exigindo o campo na tela, ou usando texto padrão na função.
 - Taxas de reembolso (reimbursement_rate_rules) valem a partir de 2026-10-03 em produção — despesa anterior a essa data não acha taxa.
 - Decidir se as policies de project-images viram migration formal.
