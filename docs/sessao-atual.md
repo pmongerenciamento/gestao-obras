@@ -328,7 +328,7 @@ NÃO FAZER AINDA:
 - Migration 038_bank_reconciliation.sql: tabela bank_transactions (lançamentos do extrato do Banco Inter), com status de conciliação (pendente/sugerido/conciliado/ignorado) e nível de confiança do match (alto/medio/null) — nunca concilia automaticamente, sempre depende de confirmação humana do financeiro (decisão explícita do Diego).
 - matched_expense_id com FK pra expenses; matched_contract_installment_id sem FK ainda (contract_installments não existe, fica pra Fase C).
 - RLS reaproveita o resource 'expenses' já existente (mesma permissão de quem lança despesa) — sem resource novo no catálogo.
-- Bug pego no teste antes de aplicar: constraint match_confidence com 'null' dentro do IN() aceitaria qualquer valor fora da lista (NULL in IN sempre retorna NULL, que o CHECK trata como passou) — corrigido removendo null da lista explícita (coluna já é nullable por natureza, não precisa estar na lista de valores aceitos).
+- Bug pego no teste antes de aplicar: constraint match_confidence com 'null' dentro do IN() aceitaria qualquer valor fora da lista (um valor que não está na lista, comparado com o null dela, faz o IN retornar NULL em vez de false, e o CHECK trata NULL como aprovado) — corrigido removendo null da lista explícita (coluna já é nullable por natureza, não precisa estar na lista de valores aceitos).
 - Aplicada em staging via COMMIT real (e10d131), testada antes em transação com rollback.
 - Client Secret do Banco Inter (configurado ontem) permanece sem rotação — avaliado como baixo risco (API exige mTLS, certificado/chave nunca expostos) e Inter não oferece botão de regenerar secret isoladamente, só recriar a integração inteira.
 
