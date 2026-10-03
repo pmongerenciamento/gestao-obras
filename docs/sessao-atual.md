@@ -403,3 +403,23 @@ PENDENTE:
 - Primeiro sync em produção (só depois de decidir o agendamento).
 - Matching por nível de confiança contra expenses (schema pronto desde a 038).
 - Remover a rota temporária /api/v1/banco-inter/test-extrato quando o sync agendado existir.
+
+## Sessão 2026-10-04 (continuação) — Vínculo despesa x contrato (042) e sugestão de conciliação (suggest_matches)
+
+- Diagnóstico só de leitura (staging e produção): expenses não tinha nenhuma coluna/FK ligando a vendor_contracts, nem coluna de CNPJ (só vendor_name em texto livre) — o nível ALTO do matching ("despesa vem de vendor_contract com CNPJ") era impossível.
+- Migration 042_expenses_vendor_contract_link.sql: expenses.vendor_contract_id (uuid, opcional — despesa avulsa continua possível) com FK pra vendor_contracts + índice idx_expenses_vendor_contract. FK sem "on delete" de propósito (padrão NO ACTION, bloqueia como RESTRICT): não dá pra apagar contrato com despesas vinculadas; fornecedor descontinuado usa vendor_contracts.status='encerrado'. Testada com rollback em staging e produção (contrato com despesa: exclusão bloqueada; sem despesa: exclusão normal, como controle) e aplicada com COMMIT nos dois (c926a0f). Produção e staging em 001-042.
+- backend/app/integrations/matching.py: suggest_matches(conn) — regras decididas nesta sessão:
+  - Só bank_transactions 'pendente' de débito (créditos ficam pra quando contract_installments existir).
+  - Despesa "ocupada" (já é matched_expense_id de transação 'sugerido'/'conciliado') não é candidata.
+  - Base dos dois níveis: valor exato E data da transação a até ±10 dias da data de referência da despesa (payment_date, senão due_date, senão 1º dia de competencia_month) — sem a janela, contrato recorrente (mesmo valor todo mês) empataria sempre.
+  - ALTO: base + CNPJ do vendor_contract da despesa (só dígitos) = payer_document da transação (só dígitos).
+  - MÉDIO: base + nome do fornecedor contido na description ou no payer_name (minúsculas, sem acento via translate(), comparação literal com strpos). pg_trgm não está instalada em nenhum dos bancos e não foi adicionada (decisão: sem dependência nova sem aprovação).
+  - Precedência ALTO -> MÉDIO; empate (2+ candidatos) num nível deixa pendente — empate no ALTO não cai pro MÉDIO; despesa que seria a única sugestão de 2+ transações da mesma rodada não é sugerida a nenhuma (resultado não depende da ordem).
+  - Grava só 'sugerido' + match_confidence + matched_expense_id, numa transação, com update protegido por reconciliation_status='pendente'. Nunca grava 'conciliado' (confirmação é sempre manual).
+- Testado no staging com cenário sintético em transação com rollback: 9 de 9 casos corretos (alto com CNPJ formatado x só dígitos, médio com acento/maiúsculas, empate médio, sem candidato, empate alto, conflito entre 2 transações, fora da janela de 30 dias, crédito ignorado); 2ª rodada não altera nada (despesas sugeridas ficam ocupadas). Commit 0133dfb. Nada aplicado/rodado em produção; ninguém chama a função ainda.
+
+PENDENTE:
+- Decidir como suggest_matches roda (natural: logo depois do sync_extrato, no mesmo agendamento — que ainda depende do retry com backoff em 503/504).
+- Preencher expenses.vendor_contract_id: a tela de despesa (ou a geração a partir dos contratos recorrentes) precisa gravar o campo, senão nada chega ao nível ALTO.
+- Avaliar pg_trgm depois que houver despesas reais, se o MÉDIO falhar com nomes abreviados/diferentes (ex.: "SILVA CONTAB" x "Contabilidade Silva Ltda").
+- Tela do financeiro pra confirmar/rejeitar sugestões ('sugerido' -> 'conciliado' / 'pendente').
