@@ -387,3 +387,19 @@ PENDENTE:
 - Decidir se as policies de project-images viram migration formal.
 - 7 arquivos possivelmente órfãos no bucket project-images.
 - Apagar backend/.env.bak-direct-url (gitignored, contém senha antiga de produção).
+
+## Sessão 2026-10-04 (continuação) — Gravação do extrato do Banco Inter (sync_extrato)
+
+- backend/app/integrations/banco_inter.py: sync_extrato(conn, data_inicio, data_fim) — chama get_extrato() e grava cada transação em bank_transactions com `on conflict (external_id) do nothing`, tudo numa transação só (ou grava o lote inteiro, ou nada). Linha já existente nunca é sobrescrita (pode já estar conciliada ou revisada pelo financeiro). Retorna {encontradas, inseridas, ignoradas}. Recebe a conexão como parâmetro, no mesmo padrão das outras funções de domínio (as rotas pegam a conexão do pool asyncpg via Depends(get_db)).
+- backend/app/cli/sync_extrato.py: comando manual `python -m app.cli.sync_extrato [--dias 3] [--env-file .env.staging]`, usando o pool do backend (init_pool/get_pool). Sem --env-file usa o DATABASE_URL do backend/.env (hoje: produção); --env-file troca o banco sem mexer no .env. Escolhido em vez de rota temporária: não precisa de deploy nem de login de master, e não deixa endpoint de escrita exposto. Sem agendamento automático ainda.
+- Validado contra o staging (não produção, por decisão do Diego — validar a escrita nova em ambiente de teste primeiro): 1ª rodada 1 encontrada/1 inserida; 2ª rodada 1 encontrada/0 inseridas/1 ignorada (deduplicação confirmada); conferência só de leitura comparando campo a campo com um get_extrato() novo: 1 de 1 batendo em todos os campos (data, valor, tipo, documento, nome, descrição, raw_payload, status 'pendente'), débitos 360.15 nos dois lados — a mesma transação dos testes anteriores de 3 dias.
+- O Banco Inter devolveu um 503 Service Unavailable passageiro no meio do teste (nada foi gravado — a falha acontece antes de abrir a transação do banco); a tentativa seguinte funcionou.
+- Linha de teste apagada do staging depois da conferência (teste com rollback antes, exclusão real com aprovação explícita) — staging não guarda dado real do extrato.
+- Commit 9ca72dd.
+
+PENDENTE:
+- Agendamento automático do sync (ainda manual).
+- Retry com backoff em 503/504 antes do agendamento — hoje um 503 do Inter derruba o sync inteiro.
+- Primeiro sync em produção (só depois de decidir o agendamento).
+- Matching por nível de confiança contra expenses (schema pronto desde a 038).
+- Remover a rota temporária /api/v1/banco-inter/test-extrato quando o sync agendado existir.
