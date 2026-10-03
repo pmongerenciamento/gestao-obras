@@ -320,7 +320,7 @@ PENDENTE / PRÓXIMOS PASSOS:
 - Considerar revogar e regerar o Client Secret do Banco Inter (passou em texto puro por uma captura de tela no chat durante a configuração — risco baixo mas registrado).
 
 NÃO FAZER AINDA:
-- Não aplicar nenhuma migration em produção (continuam só em staging).
+- Não aplicar nenhuma migration em produção (continuam só em staging). (substituído pela decisão de 2026-10-04 — Diego autorizou aplicar direto em produção enquanto não há usuários reais)
 - Não usar as credenciais do Banco Inter antes do código de integração existir e ser testado.
 
 ## Sessão 2026-10-04 — Schema de conciliação bancária (038)
