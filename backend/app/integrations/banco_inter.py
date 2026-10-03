@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import atexit
 import base64
+import json
 import os
 import tempfile
 import time
@@ -22,6 +23,7 @@ from datetime import date
 from decimal import Decimal
 from typing import Any
 
+import asyncpg
 import httpx
 
 from app.core.config import get_settings
@@ -223,3 +225,39 @@ async def get_extrato(data_inicio: date, data_fim: date) -> list[dict[str, Any]]
                 break
             pagina += 1
     return [_normalize(tx) for tx in raw]
+
+
+async def sync_extrato(
+    conn: asyncpg.connection.Connection, data_inicio: date, data_fim: date
+) -> dict[str, int]:
+    """Busca o extrato do período e grava em bank_transactions.
+
+    Deduplicação por external_id com `on conflict do nothing`: uma transação
+    que já existe NUNCA é sobrescrita (pode já estar conciliada ou revisada
+    pelo financeiro). Todas as inserções numa transação só — ou grava o
+    lote inteiro, ou nada.
+    """
+    transacoes = await get_extrato(data_inicio, data_fim)
+    inseridas = 0
+    async with conn.transaction():
+        for tx in transacoes:
+            row_id = await conn.fetchval(
+                """
+                insert into bank_transactions (
+                  external_id, transaction_date, value, type,
+                  payer_document, payer_name, description, raw_payload
+                ) values ($1, $2, $3, $4, $5, $6, $7, $8::jsonb)
+                on conflict (external_id) do nothing
+                returning id
+                """,
+                tx["external_id"], tx["transaction_date"], tx["value"], tx["type"],
+                tx["payer_document"], tx["payer_name"], tx["description"],
+                json.dumps(tx["raw_payload"]),
+            )
+            if row_id is not None:
+                inseridas += 1
+    return {
+        "encontradas": len(transacoes),
+        "inseridas": inseridas,
+        "ignoradas": len(transacoes) - inseridas,
+    }
