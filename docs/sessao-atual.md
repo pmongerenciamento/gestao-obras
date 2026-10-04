@@ -423,3 +423,23 @@ PENDENTE:
 - Preencher expenses.vendor_contract_id: a tela de despesa (ou a geração a partir dos contratos recorrentes) precisa gravar o campo, senão nada chega ao nível ALTO.
 - Avaliar pg_trgm depois que houver despesas reais, se o MÉDIO falhar com nomes abreviados/diferentes (ex.: "SILVA CONTAB" x "Contabilidade Silva Ltda").
 - Tela do financeiro pra confirmar/rejeitar sugestões ('sugerido' -> 'conciliado' / 'pendente').
+
+## Sessão 2026-10-04 (continuação) — Controle de acesso pelo usuário master (043) e bootstrap do Diego
+
+- DECISÃO: só o master concede módulos (profile_modules) e times (team_members). Migration 043_master_access_control.sql:
+  - public.is_master(): true se o usuário logado tem profiles.system_role = 'master' (security definer, search_path = '', EXECUTE só pra authenticated).
+  - Policies trocadas: profile_modules_write_financeiro -> profile_modules_write_master + profile_modules_select_master (master lê os módulos de todos; profile_modules_select_own continua); team_members_write -> team_members_write_master (team_members_read continua). teams e demais tabelas não mudaram.
+  - trg_profiles_guard_system_role: bloqueia mudança de system_role pela API (UPDATE que muda o valor, ou INSERT com o campo preenchido, quando auth.uid() não é nulo). Antes da 043, profiles_self_update + o grant de UPDATE deixavam qualquer usuário se promover a master pelo próprio perfil.
+  - trg_profiles_protect_last_master: impede rebaixar ou apagar o único master — absoluto, vale também pro postgres e pro service role. Como profiles.id tem ON DELETE CASCADE de auth.users, apagar a conta do único master também fica bloqueado. Pra trocar de master: promover o novo primeiro, depois rebaixar o antigo. Saída de emergência (só de propósito): alter table public.profiles disable trigger trg_profiles_protect_last_master (e reabilitar em seguida).
+  - As duas funções de trigger têm EXECUTE revogado de public, anon e authenticated (não afeta o disparo).
+- REGRA: system_role só muda por migration ou service role (sem claims de usuário).
+- Testes com rollback: staging 38/38 e produção 55/55 (inclui has_permission idêntico antes/depois em todas as combinações, e dados reais de auth.users/profiles comparados por contagem + md5). Aplicada com COMMIT em staging (14/14 na conferência) e em produção (18/18). Commit 4373533. Produção e staging em 001-043.
+- Bootstrap em produção (script com dry run por padrão, id resolvido pelo e-mail em auth.users): criado o perfil do Diego (não existia), system_role = 'master' e os 4 módulos (crm, financeiro, engenharia, reembolso). Dry run 21/21, commit 21/21, conferência em conexão nova 9/9. Produção: profiles 4, profile_modules 4, masters 1, team_members 0. Staging não tem master.
+
+PENDENTE:
+- Tela de gestão de acesso em /usuarios (conceder/revogar módulos e times — hoje só dá direto no banco, como master).
+- Módulos e times do Murillo, Carlos e Weslley (sem nada ainda: has_permission dá false pra eles).
+- Preencher o full_name dos perfis (todos null em produção).
+- Mensagem clara em /usuarios quando se tenta apagar ou rebaixar o único master (hoje vira erro genérico).
+- Backend (app/core/roles.py) e frontend (lib/auth/roles.ts) ainda decidem master por e-mail fixo, enquanto o banco decide por system_role — unificar.
+- A linha ('financeiro', 'team_members') do catálogo de permissões deixou de governar a escrita em team_members (agora só o master); has_permission não mudou. Decidir se a linha fica (só leitura) ou sai.
