@@ -1,8 +1,8 @@
 import { createClient as createSupabaseServerClient } from "@/lib/supabase/server";
 
-// Leitura de profile_modules (backend/migrations/019_create_profile_modules.sql)
-// — RLS (profile_modules_select_own) já restringe a leitura às linhas do
-// próprio usuário logado, sem precisar filtrar por profile_id aqui.
+// Lê os módulos do usuário logado (profile_modules, migration 019). O filtro
+// por profile_id é obrigatório: com a policy profile_modules_select_master
+// (043), o master enxerga as linhas de todos.
 
 export type ModuleCode = "crm" | "financeiro" | "engenharia" | "reembolso";
 
@@ -12,7 +12,15 @@ interface ProfileModuleRow {
 
 export async function listUserModules(): Promise<ModuleCode[]> {
   const supabase = await createSupabaseServerClient();
-  const { data, error } = await supabase.from("profile_modules").select("module");
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return [];
+
+  const { data, error } = await supabase
+    .from("profile_modules")
+    .select("module")
+    .eq("profile_id", user.id);
 
   if (error || !data) return [];
   return (data as ProfileModuleRow[]).map((row) => row.module);
