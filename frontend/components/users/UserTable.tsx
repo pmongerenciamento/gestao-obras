@@ -4,10 +4,13 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { IconDots } from "@tabler/icons-react";
 import type { ProjectOption, User } from "@/types/user";
+import { MODULES, type AccessResult } from "@/types/access";
 import { Button } from "@/components/ui/Button";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { NewUserModal } from "@/components/users/NewUserModal";
 import { AccessModal } from "@/components/users/AccessModal";
+import { ModuleTeamModal } from "@/components/users/ModuleTeamModal";
+import { ONLY_MASTER_DELETE_MESSAGE, TEAM_MEMBER_DELETE_MESSAGE } from "@/lib/api/access-errors";
 import { deleteUser, updateUser } from "@/lib/api/user-mutations";
 
 // Lista de usuários da tela /usuarios — menu de três pontos por linha segue o
@@ -16,6 +19,8 @@ import { deleteUser, updateUser } from "@/lib/api/user-mutations";
 interface UserTableProps {
   users: User[];
   projects: ProjectOption[];
+  access: AccessResult;
+  currentUserId: string | null;
 }
 
 function statusBadge(user: User) {
@@ -24,11 +29,34 @@ function statusBadge(user: User) {
   return { label: "Ativa", className: "bg-green-100 text-green-800" };
 }
 
-export function UserTable({ users, projects }: UserTableProps) {
+export function UserTable({ users, projects, access, currentUserId }: UserTableProps) {
   const router = useRouter();
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
   const [newUserOpen, setNewUserOpen] = useState(false);
   const [accessUserId, setAccessUserId] = useState<string | null>(null);
+  const [moduleTeamUserId, setModuleTeamUserId] = useState<string | null>(null);
+
+  // Seção de módulos e times: só aparece pro master (is_master() no banco) e
+  // só se getAccessData() funcionou — senão a tela segue igual, com aviso.
+  const masterAccess = access.ok && access.data.isMaster ? access.data : null;
+  const moduleTeamUser = users.find((u) => u.id === moduleTeamUserId) ?? null;
+
+  // Exclusão bloqueada antes de chamar o backend: o trigger da 043 impede
+  // apagar o único master (a Admin API devolveria um erro genérico), e
+  // team_members.profile_id não tem on delete cascade (015).
+  function deleteBlockReason(user: User): string | null {
+    if (!masterAccess) return null;
+    const profile = masterAccess.profiles[user.id];
+    if (!profile) return null;
+    if (profile.systemRole === "master") {
+      const otherMaster = Object.values(masterAccess.profiles).some(
+        (p) => p.profileId !== user.id && p.systemRole === "master",
+      );
+      if (!otherMaster) return ONLY_MASTER_DELETE_MESSAGE;
+    }
+    if (profile.teams.length > 0) return TEAM_MEMBER_DELETE_MESSAGE;
+    return null;
+  }
   const [deleteTarget, setDeleteTarget] = useState<User | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
@@ -62,6 +90,11 @@ export function UserTable({ users, projects }: UserTableProps) {
 
   async function handleConfirmDelete() {
     if (!deleteTarget) return;
+    const blockReason = deleteBlockReason(deleteTarget);
+    if (blockReason) {
+      setDeleteError(blockReason);
+      return;
+    }
     setDeleting(true);
     setDeleteError(null);
     try {
@@ -83,6 +116,11 @@ export function UserTable({ users, projects }: UserTableProps) {
       </div>
 
       {actionError && <p className="mb-4 text-sm text-red-500">{actionError}</p>}
+      {!access.ok && (
+        <p className="mb-4 rounded-md bg-yellow-50 px-3 py-2 text-sm text-yellow-800">
+          Módulos e times: {access.error}
+        </p>
+      )}
 
       <div className="rounded-lg border border-black/10 bg-white">
         <table className="w-full text-left text-sm">
@@ -91,6 +129,8 @@ export function UserTable({ users, projects }: UserTableProps) {
               <th className="rounded-tl-lg px-4 py-3 font-medium">Usuário</th>
               <th className="px-4 py-3 font-medium">Status</th>
               <th className="px-4 py-3 font-medium">Projetos</th>
+              {masterAccess && <th className="px-4 py-3 font-medium">Módulos</th>}
+              {masterAccess && <th className="px-4 py-3 font-medium">Time</th>}
               <th className="rounded-tr-lg px-4 py-3" />
             </tr>
           </thead>
@@ -116,6 +156,22 @@ export function UserTable({ users, projects }: UserTableProps) {
                     </span>
                   </td>
                   <td className="px-4 py-3 text-black/70">{user.memberships.length}</td>
+                  {masterAccess && (
+                    <td className="px-4 py-3 text-black/70">
+                      {masterAccess.profiles[user.id]
+                        ? MODULES.filter((m) => masterAccess.profiles[user.id].modules.includes(m.code))
+                            .map((m) => m.label)
+                            .join(", ") || "—"
+                        : "sem perfil"}
+                    </td>
+                  )}
+                  {masterAccess && (
+                    <td className="px-4 py-3 text-black/70">
+                      {masterAccess.profiles[user.id]?.teams
+                        .map((t) => masterAccess.teams.find((team) => team.id === t.teamId)?.name ?? "?")
+                        .join(", ") || "—"}
+                    </td>
+                  )}
                   <td className="relative px-4 py-3 text-right">
                     <div
                       className="relative inline-block"
@@ -142,6 +198,18 @@ export function UserTable({ users, projects }: UserTableProps) {
                           >
                             Gerenciar acesso
                           </button>
+                          {masterAccess && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setMenuOpenId(null);
+                                setModuleTeamUserId(user.id);
+                              }}
+                              className="w-full px-3 py-2 text-left text-sm text-black hover:bg-black/5"
+                            >
+                              Módulos e time
+                            </button>
+                          )}
                           <button
                             type="button"
                             onClick={() => handleResetPassword(user)}
@@ -195,6 +263,17 @@ export function UserTable({ users, projects }: UserTableProps) {
           user={accessUser}
           projects={projects}
           onClose={() => setAccessUserId(null)}
+          onChanged={() => router.refresh()}
+        />
+      )}
+
+      {masterAccess && moduleTeamUser && (
+        <ModuleTeamModal
+          user={moduleTeamUser}
+          access={masterAccess.profiles[moduleTeamUser.id]}
+          teams={masterAccess.teams}
+          isSelf={moduleTeamUser.id === currentUserId}
+          onClose={() => setModuleTeamUserId(null)}
           onChanged={() => router.refresh()}
         />
       )}

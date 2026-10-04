@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { Header } from "@/components/layout/Header";
 import { UserTable } from "@/components/users/UserTable";
+import { getAccessData } from "@/lib/api/access";
 import { listProjects } from "@/lib/api/projects";
 import { listUsers } from "@/lib/api/users";
 import { isMasterUser } from "@/lib/auth/roles";
@@ -19,14 +20,16 @@ export default async function UsersPage() {
 
   if (!isMasterUser(user?.email)) redirect("/");
 
-  const [users, projects] = await Promise.all([listUsers(), listProjects()]);
+  // getAccessData() nunca lança: se falhar, a tela segue igual e só a seção
+  // de módulos e times mostra o aviso (ver UserTable).
+  const [users, projects, access] = await Promise.all([listUsers(), listProjects(), getAccessData()]);
   const projectOptions = projects.map((project) => ({ id: project.id, name: project.name }));
 
   return (
     <div className="flex min-h-screen flex-col">
       <Header breadcrumb={[{ label: "Projetos", href: "/projetos" }, { label: "Usuários" }]} userEmail={user?.email} />
       <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col px-6 py-8">
-        <UserTable users={users} projects={projectOptions} />
+        <UserTable users={users} projects={projectOptions} access={access} currentUserId={user?.id ?? null} />
       </main>
     </div>
   );
