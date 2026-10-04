@@ -455,3 +455,24 @@ PENDENTE:
 - Tela de gestão de acesso (módulos e time) em /usuarios — próxima etapa, com plano de arquivos revisado. A RLS agora cobre tudo que ela precisa: o master lê e grava profile_modules e team_members, e lê teams, sem depender de módulo.
 - team_members.profile_id referencia profiles sem on delete cascade (015): excluir a conta de quem está num time vai falhar por FK. Avisar na tela ou decidir mudar a FK (decisão de dados).
 - A regra "um time por usuário" fica só na tela (o banco só tem unique (team_id, profile_id)); unique em profile_id adiado por decisão.
+
+## Sessão 2026-10-04 (continuação) — Tela de gestão de módulos e times em /usuarios (438bd1c)
+
+- Seção nova na tela /usuarios, visível só pro master: item "Módulos e time" no menu de cada linha (abre um modal) e colunas Módulos e Time na tabela. O gate é rpc('is_master') no banco; o redirect da página continua por e-mail (isMasterUser).
+- Grava direto pelo cliente Supabase do navegador, sem backend: a segurança está nas policies da 043 (profile_modules/team_members só o master grava) e da 044 (master lê teams).
+- Arquivos criados: frontend/types/access.ts (tipos, lista MODULES, rótulos de partner_tier, AccessResult), lib/api/access.ts (getAccessData: leitura server-side; nunca lança — em erro, /usuarios segue funcionando e só a seção mostra aviso), lib/api/access-mutations.ts (grantModule, revokeModule, setTeam, removeTeam), lib/api/access-errors.ts (tradução dos erros do banco: 42501 da RLS e dos triggers da 043, 23503, 23505), components/users/ModuleTeamModal.tsx. Alterados: app/(app)/usuarios/page.tsx e components/users/UserTable.tsx.
+- DECISÕES:
+  - Um time por pessoa só na tela (o banco aceita mais de um; o modal avisa e oferece remover os extras).
+  - Trocar de time faz update da linha existente em team_members, não delete + insert: pelo navegador seriam duas requisições, e se a segunda falhasse o usuário ficaria sem time.
+  - 23505 (unique violation) ao conceder módulo conta como sucesso: alguém concedeu antes e o estado final é o mesmo.
+  - Usuário sem perfil: aviso no modal, sem controles; na tabela aparece "sem perfil".
+  - Remover os próprios módulos ou sair do próprio time pede confirmação, dizendo que isso não tira o papel de master nem o acesso a /usuarios e que dá pra conceder de volta.
+  - Exclusão de conta bloqueada antes de chamar o backend quando o alvo é o único master (trigger da 043) ou está em um time (FK sem cascade da 015).
+- Validação: tsc --noEmit e eslint sem erros nos 7 arquivos. Teste visual ainda não feito.
+
+PENDENTE:
+- Teste visual em produção logado como Diego (grava em profile_modules/team_members de verdade — fazer em modo manual).
+- Preencher o full_name dos perfis (todos null em produção).
+- Módulos e times do Murillo, Carlos e Weslley, agora pela tela.
+- Mensagem de erro clara quando o backend falha ao apagar o único master (a tela já bloqueia antes quando sabe que é o único master; se a checagem não tiver os dados, a Admin API devolve erro genérico).
+- Backend (app/core/roles.py) e frontend (lib/auth/roles.ts) ainda decidem master por e-mail, enquanto o banco decide por system_role — unificar.
