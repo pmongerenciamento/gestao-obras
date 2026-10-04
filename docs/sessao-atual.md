@@ -443,3 +443,4 @@ PENDENTE:
 - Mensagem clara em /usuarios quando se tenta apagar ou rebaixar o único master (hoje vira erro genérico).
 - Backend (app/core/roles.py) e frontend (lib/auth/roles.ts) ainda decidem master por e-mail fixo, enquanto o banco decide por system_role — unificar.
 - A linha ('financeiro', 'team_members') do catálogo de permissões deixou de governar a escrita em team_members (agora só o master); has_permission não mudou. Decidir se a linha fica (só leitura) ou sai.
+- profile_modules_select_master (043) é redundante com profile_modules_write_master (for all); inofensiva, manter.
