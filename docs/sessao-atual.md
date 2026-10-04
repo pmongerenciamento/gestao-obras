@@ -444,3 +444,14 @@ PENDENTE:
 - Backend (app/core/roles.py) e frontend (lib/auth/roles.ts) ainda decidem master por e-mail fixo, enquanto o banco decide por system_role — unificar.
 - A linha ('financeiro', 'team_members') do catálogo de permissões deixou de governar a escrita em team_members (agora só o master); has_permission não mudou. Decidir se a linha fica (só leitura) ou sai.
 - profile_modules_select_master (043) é redundante com profile_modules_write_master (for all); inofensiva, manter.
+
+## Sessão 2026-10-04 (continuação) — listUserModules filtrado (ff051f2) e leitura de teams pro master (044)
+
+- BUG causado pela 043, corrigido em ff051f2: listUserModules() (frontend/lib/api/modules.ts) lia profile_modules sem filtro e dependia da RLS pra devolver só as linhas do próprio usuário. Com profile_modules_select_master, o master passou a receber os módulos de todos. Agora filtra por profile_id do usuário logado (supabase.auth.getUser(); sem usuário, lista vazia). Comentário de lib/api/teams.ts corrigido: teams_read só libera pro módulo financeiro, não pro CRM.
+- Migration 044_master_read_teams.sql: policy teams_select_master (for select to authenticated using public.is_master()), aditiva. Motivo: teams_read e teams_write (023) dependem do catálogo, e só o módulo financeiro tem acesso a teams; um master sem financeiro não listaria os times na futura tela de gestão de acesso. team_members não precisou: team_members_write_master (043) é "for all", que vale também pra SELECT (confirmado no teste: o master sem módulo já lia team_members antes da 044).
+- Testes com rollback: staging 25/25 e produção 40/40 (master fictício sem módulo passa a ler teams; usuário comum sem financeiro continua sem ler teams nem team_members; usuário com financeiro lê os dois como antes; anon não lê; has_permission idêntico; em produção, dados reais e o perfil + módulos do Diego comparados por contagem + md5). Aplicada com COMMIT em staging (8/8) e em produção (15/15). Commit 9b1fa55. Produção e staging em 001-044.
+
+PENDENTE:
+- Tela de gestão de acesso (módulos e time) em /usuarios — próxima etapa, com plano de arquivos revisado. A RLS agora cobre tudo que ela precisa: o master lê e grava profile_modules e team_members, e lê teams, sem depender de módulo.
+- team_members.profile_id referencia profiles sem on delete cascade (015): excluir a conta de quem está num time vai falhar por FK. Avisar na tela ou decidir mudar a FK (decisão de dados).
+- A regra "um time por usuário" fica só na tela (o banco só tem unique (team_id, profile_id)); unique em profile_id adiado por decisão.
