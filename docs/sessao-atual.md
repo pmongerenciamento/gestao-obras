@@ -529,3 +529,21 @@ PENDENTE:
 - Fechar a escrita direta em contract_readjustments (hoje o financeiro grava direto; agora que existe apply_readjustment, dá para exigir só a função, como nos splits).
 - Testar a FK de contract_installments para contracts sem cascade na carga dos contratos reais; created_by é obrigatório, então a carga por script precisa informar o id do Diego.
 - Planilha da Vanessa; Carlos e Weslley sem módulos e times; o Murillo está só como teste; full_name dos perfis; proteção de login da Vercel antes de dar acesso aos colegas.
+
+## Sessão 2026-10-05 (continuação) - Vigência por mês na divisão de receita (047)
+
+- Migration 047 aplicada em staging e em produção (ambos em 001-047). contract_revenue_splits ganha valid_from (dia 1 do mês, obrigatório); a unicidade e a soma 100 passam a valer por (contrato, valid_from). Cada versão vale até a próxima do mesmo contrato; a parcela é alocada pela versão com o maior valid_from <= competencia_month (alocação nas views da 049).
+- set_contract_splits mudou de assinatura: set_contract_splits(p_contract_id, p_valid_from, p_splits, p_allow_retroactive default false). Grava uma versão por chamada; lista vazia remove a versão. Recusa (55000) mudança que reatribua parcela emitida ou recebida na janela da versão, a menos que p_allow_retroactive = true (checagem conservadora: recusa até regravação igual). Recusa remoção que deixe parcela sem regra vigente, mesmo com p_allow_retroactive.
+- generate_contract_installments e extend_recurring_installments passam a exigir regra vigente no mês da primeira parcela a criar (55000). Na extensão, uma chamada sem nada a criar continua devolvendo 0. close_deal não mudou (md5 do corpo igual e fluxo de ponta a ponta igual antes e depois).
+- competencia_month é coluna gerada (date_trunc do mês do vencimento) e não pode diferir do mês do due_date; a checagem de regra vigente usa a mesma base que as views vão usar.
+- Nenhum código do frontend ou do backend chama set_contract_splits, generate ou extend hoje; produção e staging não tinham contrato nem parcela a carregar.
+- Testes: staging com rollback 194/194, apply em staging 14/14, produção com rollback 236/236 (com dados reais comparados por contagem e md5 antes e depois), apply em produção 25/25.
+- A partir da 047, os scripts de teste e aplicação ficam versionados em backend/migrations/tests/: test_047_staging.py, test_047_prod.py, apply_047_staging.py, apply_047_prod.py e carga_inicial_splits.py (proposta de carga de versões, não executada). Os scripts da 043 a 046 ficaram só no scratchpad das sessões e não estão no repositório.
+
+PENDENTE:
+- 048: ciclo de vida do contrato (parcelado, intervalo e encerramento).
+- 049: views do DRE (recurso dre, dre_tax_rate(), security_invoker, portão has_permission('dre','read')), alocando pela versão vigente da divisão.
+- Migration própria: close_deal copiando first_due_date da proposta e chamando a geração de parcelas (agora também precisa de uma versão de divisão vigente antes de gerar).
+- Decidir se p_allow_retroactive exige permissão extra (por exemplo, is_master()); hoje basta a permissão de escrita nos splits.
+- Carga inicial de versões de divisão quando houver contratos reais (carga_inicial_splits.py: 100% para o time do projeto; o 80/20 é decisão do Diego por contrato e vem depois, pela tela).
+- transfer_project_portfolio: migration própria, depois da mecânica de versões estar em uso.
