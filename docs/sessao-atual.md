@@ -544,6 +544,20 @@ PENDENTE:
 - 048: ciclo de vida do contrato (parcelado, intervalo e encerramento).
 - 049: views do DRE (recurso dre, dre_tax_rate(), security_invoker, portão has_permission('dre','read')), alocando pela versão vigente da divisão.
 - Migration própria: close_deal copiando first_due_date da proposta e chamando a geração de parcelas (agora também precisa de uma versão de divisão vigente antes de gerar).
-- Decidir se p_allow_retroactive exige permissão extra (por exemplo, is_master()); hoje basta a permissão de escrita nos splits.
+- Carga inicial de versões de divisão quando houver contratos reais (carga_inicial_splits.py: 100% para o time do projeto; o 80/20 é decisão do Diego por contrato e vem depois, pela tela).
+- transfer_project_portfolio: migration própria, depois da mecânica de versões estar em uso.
+
+## Sessão 2026-10-05 (continuação) - Retroativo na divisão de receita só para o master (048)
+
+- Migration 048 aplicada em staging e em produção (ambos em 001-048). set_contract_splits passa a recusar com 42501 quando p_allow_retroactive = true e o usuário logado não é master (public.is_master(), da 043), antes de tocar no contrato e mesmo que a janela da versão não tenha parcela travada. Decisão: só o master pode usar o retroativo.
+- O resto da função é o corpo da 047 sem mudança (conferido por script no arquivo e no banco): sem retroativo, o financeiro não master continua gravando versões e recebendo 55000 quando a mudança reatribuiria parcela emitida ou recebida; a regra de cobertura (não deixar parcela sem regra) vale também para o master. Assinatura, security definer, search_path vazio e privilégios mantidos; is_master(), close_deal, generate e extend inalterados.
+- Testes: staging com rollback 220/220, apply em staging 13/13, produção com rollback 262/262 (com master de teste fictício dentro da transação e dados reais comparados por contagem e md5 antes e depois), apply em produção 23/23.
+- Scripts em backend/migrations/tests/: test_048_staging.py, test_048_prod.py, apply_048_staging.py e apply_048_prod.py. Os test_047_* ficam como registro da 047: depois da 048, os casos deles que usam retroativo com financeiro não master passam a dar 42501.
+- Nova numeração: 049 = ciclo de vida do contrato (parcelado, intervalo e encerramento); 050 = views do DRE. As menções a "048" e "049" no PENDENTE da 047 acima seguem a numeração antiga.
+
+PENDENTE:
+- 049: ciclo de vida do contrato (parcelado, intervalo e encerramento).
+- 050: views do DRE (recurso dre, dre_tax_rate(), security_invoker, portão has_permission('dre','read')), alocando pela versão vigente da divisão.
+- Migration própria: close_deal copiando first_due_date da proposta e chamando a geração de parcelas (precisa de uma versão de divisão vigente antes de gerar).
 - Carga inicial de versões de divisão quando houver contratos reais (carga_inicial_splits.py: 100% para o time do projeto; o 80/20 é decisão do Diego por contrato e vem depois, pela tela).
 - transfer_project_portfolio: migration própria, depois da mecânica de versões estar em uso.
