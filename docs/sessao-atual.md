@@ -476,3 +476,20 @@ PENDENTE:
 - Módulos e times do Murillo, Carlos e Weslley, agora pela tela.
 - Mensagem de erro clara quando o backend falha ao apagar o único master (a tela já bloqueia antes quando sabe que é o único master; se a checagem não tiver os dados, a Admin API devolve erro genérico).
 - Backend (app/core/roles.py) e frontend (lib/auth/roles.ts) ainda decidem master por e-mail, enquanto o banco decide por system_role — unificar.
+
+## Sessão 2026-10-05 — Tela de gestão de acesso testada em produção
+
+- Teste da tela /usuarios em produção, logado como Diego (frontend local apontando para produção, backend local em 127.0.0.1:8000). Leitura provada: colunas Módulos e Time, item "Módulos e time" no menu (is_master() verdadeiro). Gravação provada por conferência independente no banco (READ ONLY): profile_modules passou de 4 para 5 linhas, team_members de 0 para 1, perfil do Diego inalterado por md5.
+- Murillo configurado SÓ COMO TESTE: módulo reembolso, time Diego/Murillo, founding, sem líder. A configuração final dele é pendência (crm, financeiro, engenharia e reembolso).
+- Configuração final decidida, ainda não aplicada: Murillo (time Diego/Murillo, founding, sem líder; crm, financeiro, engenharia, reembolso); Carlos (time Carlos, associate, sem líder; engenharia e reembolso); Weslley (time Weslley, associate, sem líder; engenharia e reembolso).
+- Senha do Diego em produção redefinida pela Admin API (script com simulação por padrão), porque o link de recuperação do Supabase levou ao login da Vercel e o código se perdeu. A senha foi para um arquivo local fora do repositório, que o Diego apaga depois de guardar no gerenciador de senhas.
+- Causas dos tropeços do teste, para não repetir: o servidor com -H localhost escutava só em ::1 (usar 127.0.0.1); abrir o endereço errado fazia /usuarios "voltar" para /; o .env.local aponta o backend para http://localhost:8000, então a lista de usuários exige o backend local no ar.
+
+PENDENTE:
+- O endereço de produção na Vercel pede login da Vercel (proteção de deploy): resolver antes de dar acesso aos colegas.
+- Carlos e Weslley sem módulos nem times (configuração decidida acima); completar o Murillo.
+- Acesso deles ao DRE do próprio portfólio: depende de uma tela que ainda não existe.
+- Definir o significado do campo is_lead.
+- Preencher o full_name dos perfis (todos null).
+- Módulo Financeiro aparece como "Em breve" na home, sem tela.
+- Planilha da Vanessa ainda não recebida.
