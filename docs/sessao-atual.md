@@ -493,3 +493,21 @@ PENDENTE:
 - Preencher o full_name dos perfis (todos null).
 - Módulo Financeiro aparece como "Em breve" na home, sem tela.
 - Planilha da Vanessa ainda não recebida.
+
+## Sessão 2026-10-05 (continuação) - Calendário de parcelas da receita (045)
+
+- Migration 045 aplicada em staging e em produção (ambos em 001-045). Cria bank_accounts (inter_pj, pf_diego, pf_murillo), revenue_types (8 tipos da planilha, com as regras in_partner_dre e goes_through_split como dado), service_types.default_revenue_type, contract_installments, contract_readjustments e contract_revenue_splits. RLS, triggers (conta PF implica sem nota; soma 100 por contrato) e set_contract_splits atômica e única porta de escrita dos splits.
+- Testes: staging com rollback 111/111, apply em staging 37/37, produção com rollback 132/132, apply em produção 45/45, com dados reais comparados por contagem e md5 antes e depois.
+- Decisões de desenho: competência = mês do vencimento (coluna gerada com date_trunc de ::timestamp, porque a versão com date depende de fuso e não é imutável); o abatimento depende da conta de destino da parcela (PF = sem nota), não do titular; Orçamento fica fora do DRE do sócio; o reembolso entra na receita do projeto de origem, sem split; split 80/20 configurado à mão, nunca automático no fechamento; linha a_parte do split pode guardar team_id (destino provável: Diego/Murillo, a confirmar) e fica fora do DRE de Carlos e Weslley.
+- Planilha de controle: 361 linhas reais (Banco Inter 319, Conta PF Murillo 23, Conta PF Diego 19); 21 linhas totalmente em branco (sem cliente, projeto, valor nem data), a ignorar na carga; 8 tipos de descrição (Gerenciamento, Relatório Fundo, Reembolso, Orçamento, Planejamento, Documentação Final, FRE, Auditorias).
+- Próximas migrations: 046 (contracts.first_due_date, close_deal copiando first_due_date, FK, check e índice em bank_transactions.matched_contract_installment_id, funções de geração, extensão do horizonte, reajuste e confirmação de recebimento) e 047 (views do DRE com security_invoker e portão has_permission('dre','read')). Sugestão: isolar a mudança no close_deal numa migration própria, por ser função de segurança já testada em produção.
+
+PENDENTE:
+- Significado de FRE (rótulo provisório "FRE").
+- Tratamento dos 20% do split (time com imposto, centro sem imposto ou fora do resultado por portfólio) e se o time Diego/Murillo aparece como linha própria no DRE.
+- Orçamento paga ou não os 16,7%.
+- Regra de data da despesa de reembolso (data do gasto, vencimento do lançamento ou aprovação), a confirmar com um caso real.
+- fee_value no parcelado: confirmar com um contrato real (a geração do parcelado fica bloqueada até lá).
+- Conferência final contra os DRE de julho (Carlos e Weslley): informar o caminho dos arquivos.
+- Na 046: testar a FK de contract_installments para contracts sem cascade; created_by é obrigatório, então a carga por script precisa informar o id do Diego.
+- Planilha da Vanessa; Carlos e Weslley sem módulos e times; o Murillo está só como teste; full_name dos perfis; proteção de login da Vercel antes de dar acesso aos colegas.
