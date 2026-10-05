@@ -511,3 +511,21 @@ PENDENTE:
 - Conferência final contra os DRE de julho (Carlos e Weslley): informar o caminho dos arquivos.
 - Na 046: testar a FK de contract_installments para contracts sem cascade; created_by é obrigatório, então a carga por script precisa informar o id do Diego.
 - Planilha da Vanessa; Carlos e Weslley sem módulos e times; o Murillo está só como teste; full_name dos perfis; proteção de login da Vercel antes de dar acesso aos colegas.
+
+## Sessão 2026-10-05 (continuação) - Funções do calendário de parcelas (046)
+
+- Migration 046 aplicada em staging e em produção (ambos em 001-046). Adiciona contracts.first_due_date; em bank_transactions, FK de matched_contract_installment_id para contract_installments (sem on delete), check de exclusividade (despesa e parcela não juntas), check de direção (parcela só em crédito, despesa só em débito) e índice único parcial (uma parcela só pode ser quitada por uma transação); e as funções generate_contract_installments, extend_recurring_installments, apply_readjustment, confirm_installment_receipt_from_bank e confirm_installment_receipt_manual, mais a auxiliar fn_contract_is_revision_point (sem EXECUTE para a API). Todas security definer, search_path = '', has_permission, revoke de public e anon.
+- close_deal NÃO foi alterado (md5 do corpo igual antes e depois; fluxo de fechamento de ponta a ponta testado antes e depois). A cópia de first_due_date da proposta para o contrato fica para uma migration própria; até lá o first_due_date é preenchido à mão.
+- Regras: vencimento n = first_due_date + n meses sempre a partir do primeiro (31/01, 28 ou 29/02, 31/03); mensal gera 12 parcelas ou até end_date; parcelado recusado até confirmar o sentido de fee_value; ponto de revisão na primeira parcela com vencimento a partir de cada aniversário do start_date; extensão idempotente, pula vencimentos que já têm parcela projetada e herda o fator de reajuste; reajuste só nas parcelas projetadas a partir da revisão, em ordem cronológica, uma vez por revisão; contrato encerrado recusado na geração e na extensão; confirmação pelo banco só para crédito em conta conciliada pela API e nunca automática; confirmação manual para as contas PF.
+- Testes: staging com rollback 141/141, apply em staging 34/34, produção com rollback 177/177, apply em produção 41/41, com dados reais comparados por contagem e md5 antes e depois.
+
+PENDENTE:
+- 047: recurso dre, dre_tax_rate() e as views do DRE (security_invoker, portão has_permission('dre','read')). Depende das decisões abaixo.
+- Migration própria: close_deal copiando first_due_date da proposta e chamando a geração de parcelas.
+- Matching automático de créditos contra parcelas (backend Python), usando valor exato, janela de ±10 dias e CNPJ da SPE ou do cliente, só para parcelas em conta conciliada pela API.
+- Telas: calendário de parcelas no contrato, reajuste, conciliação de créditos.
+- Decisões do Diego: tratamento dos 20% do split (time com imposto, centro sem imposto ou fora do resultado por portfólio) e se o time Diego/Murillo aparece como linha própria no DRE; Orçamento paga ou não os 16,7%; regra de data da despesa de reembolso; fee_value no parcelado; significado de FRE (rótulo provisório "FRE").
+- Conferência final contra os DRE de julho (Carlos e Weslley): informar o caminho dos arquivos.
+- Fechar a escrita direta em contract_readjustments (hoje o financeiro grava direto; agora que existe apply_readjustment, dá para exigir só a função, como nos splits).
+- Testar a FK de contract_installments para contracts sem cascade na carga dos contratos reais; created_by é obrigatório, então a carga por script precisa informar o id do Diego.
+- Planilha da Vanessa; Carlos e Weslley sem módulos e times; o Murillo está só como teste; full_name dos perfis; proteção de login da Vercel antes de dar acesso aos colegas.
