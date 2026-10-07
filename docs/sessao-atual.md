@@ -578,3 +578,20 @@ PENDENTE:
 - Segurança: os scripts de teste e de aplicação desligam a verificação do certificado do banco (usar o certificado raiz do Supabase em um helper único); e-mail do master ainda escrito nos scripts da 047 e da 048 (usar MASTER_EMAIL do .env).
 - Fechar a escrita direta em contract_readjustments (hoje o financeiro grava direto; existe apply_readjustment).
 - Decisões e dados: caminho dos DRE de julho para a conferência final; portfólio dos dois Orçamentos de julho; planilha da Vanessa incompleta; Carlos e Weslley sem módulos e times; Murillo só com reembolso (teste); full_name dos perfis; login da Vercel antes de dar acesso aos colegas.
+
+## Sessão 2026-10-07 - Cadastro de faturamento (050)
+
+- Migration 050 aplicada em staging e em produção (ambos em 001-050). Só tabelas novas: taxpayer_profiles (perfil fiscal da SPE, um por SPE; o tomador da nota é sempre a SPE), billing_contacts (destinatários por SPE ou por contrato; vale a lista do contrato se tiver ao menos um "para" ativo, senão a da SPE), contract_fiscal_settings (versões por contrato com vigência; todos os campos fiscais opcionais), company_tax_regimes (regime da empresa por vigência; só o master grava; seed: simples desde 2026-01-01) e dre_tax_rates (taxa do DRE por mês, digitada todo mês com o dado do contador; seed de junho e julho de 2026 a 0,167).
+- Regras: sem DELETE pela API em perfis, contatos, versões fiscais e taxas; trava que impede alterar a vigência do regime quando há parcela emitida ou recebida nela (vale também para migration e service role; a saída de emergência é desligar o gatilho de propósito); a linha do lucro presumido só entra depois de confirmada pelo contador e antes de emitir ou receber parcela da nova vigência; document_lead_days não tem significado documentado e não é usado.
+- Testes: staging com rollback 166/166, apply em staging 49/49, produção com rollback 209/209, apply em produção 54/54, com dados reais comparados por contagem e md5.
+- Decisões de produto: tomador sempre a SPE (uma SPE por projeto; a mesma SPE em projetos diferentes entra na 051 por campo opcional no contrato); códigos fiscais, ISS e retenções opcionais até a emissão automática em janeiro; endereço fiscal pode ficar parcial; boleto e Pix pela conta de destino da parcela (inter_pj por padrão); cerca de 25 clientes, cadastro pela tela.
+
+PENDENTE:
+- 051: campo "SPE do contrato" (mesma SPE em projetos diferentes) e bloqueio de INSERT de contrato já encerrado.
+- View de completude (pronto para operar e pronto para emitir) e views do DRE (taxa por mês, regime e portfólio com vigência).
+- Tela de cadastro (SPE, contratos, dados fiscais e destinatários) e carga dos contratos reais; a parte operacional do contrato não precisa de migration nova.
+- close_deal copiando prazo, intervalo e primeiro vencimento, sem sobrescrever dados já preenchidos (migration própria, por último); tirar 'parcelado' dos checks depois que o frontend parar de usá-lo.
+- Segurança: scripts desligam a verificação do certificado do banco (usar o certificado raiz do Supabase em um helper único); e-mail do master ainda escrito nos scripts da 047 e da 048; repositório como Private.
+- Fechar a escrita direta em contract_readjustments; quando a emissão existir, travar as versões fiscais já usadas numa nota emitida.
+- Decisões e dados: caminho dos DRE de julho; portfólio dos dois Orçamentos de julho; planilha da Vanessa incompleta; Carlos e Weslley sem módulos e times; Murillo só com reembolso (teste); full_name dos perfis; login da Vercel antes de dar acesso aos colegas.
+- Estudos: salvamento automático no Drive, conciliação, pagamento de contas pelo banco; emissão automática em janeiro.
