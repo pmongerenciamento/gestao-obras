@@ -561,3 +561,20 @@ PENDENTE:
 - Migration própria: close_deal copiando first_due_date da proposta e chamando a geração de parcelas (precisa de uma versão de divisão vigente antes de gerar).
 - Carga inicial de versões de divisão quando houver contratos reais (carga_inicial_splits.py: 100% para o time do projeto; o 80/20 é decisão do Diego por contrato e vem depois, pela tela).
 - transfer_project_portfolio: migration própria, depois da mecânica de versões estar em uso.
+
+## Sessão 2026-10-06/07 - Prazo, intervalo e encerramento de contrato (049)
+
+- Migration 049 aplicada em staging e em produção (ambos em 001-049). Contratos e propostas ganham term_months e billing_interval_months (1, 2, 3, 4, 6 ou 12); fee_value é o valor de CADA PARCELA e o valor global é calculado (fee_value x term_months / intervalo, não gravado). O parcelado vira recorrente com prazo (unificação em fases: 'parcelado' continua nos checks). Geração e extensão respeitam o intervalo e o prazo.
+- Encerramento: close_contract(contrato, data do aviso, motivo) com aviso prévio fixo de 30 dias; end_date = aviso + 30; cancela só as parcelas projetadas depois da data final; parcela emitida ou recebida depois da data final impede; exige permissão em contratos (crm) e em parcelas (financeiro). Trigger trg_contracts_guard_close: pela API só se encerra pela função e não se reabre; migration e service role não são barradas.
+- close_deal NÃO foi alterado (md5 igual). Testes: staging com rollback 336/336, apply staging 33/33, produção com rollback 378/378, apply produção 42/42.
+- Decisões de produto: cadastro de contrato o mais completo possível, em dois níveis (pronto para operar e pronto para emitir), com os campos fiscais opcionais até janeiro; emissão automática de nota fiscal fica para janeiro, depois da virada para o lucro presumido e da reforma tributária; regime tributário com data de início; taxa do DRE por mês em tabela; Orçamento e FRE seguem a regra de portfólio do contrato; arquivos no Drive em estrutura da PMON (um documento por parcela, nome com a data de vencimento na frente, pastas Receitas e Despesas por mês, leitura para os dois sócios, pacote do contador gerado pelo sistema); estudos: conciliação, salvamento automático, pagamento de contas pelo banco.
+
+PENDENTE:
+- 050: close_deal copiando term_months, billing_interval_months e first_due_date da proposta (migration própria).
+- Migration que tira 'parcelado' dos checks de contracts e proposals, depois que o frontend deixar de usá-lo; ajustar o painel do CRM para o valor global.
+- Casos que o trigger de encerramento não cobre: criar contrato já 'encerrado' (INSERT).
+- 051: views do DRE (taxa por mês, regime com vigência, portfólio com vigência).
+- Tela de cadastro de clientes e contratos (completa, com dados fiscais e destinatários de e-mail); carga dos contratos reais.
+- Segurança: os scripts de teste e de aplicação desligam a verificação do certificado do banco (usar o certificado raiz do Supabase em um helper único); e-mail do master ainda escrito nos scripts da 047 e da 048 (usar MASTER_EMAIL do .env).
+- Fechar a escrita direta em contract_readjustments (hoje o financeiro grava direto; existe apply_readjustment).
+- Decisões e dados: caminho dos DRE de julho para a conferência final; portfólio dos dois Orçamentos de julho; planilha da Vanessa incompleta; Carlos e Weslley sem módulos e times; Murillo só com reembolso (teste); full_name dos perfis; login da Vercel antes de dar acesso aos colegas.
