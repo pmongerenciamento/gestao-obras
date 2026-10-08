@@ -32,10 +32,12 @@ from pathlib import Path
 
 import asyncpg
 
+import _lib
+
 REPO = Path(r"C:\Users\pmon_admin\Documents\gestao-obras")
 TARGETS = {"staging": (REPO / "backend" / ".env.staging", "us-west-2", "gesqstdtbbdhlravddhd", "ttqtefwntkgpgatrcyps"),
            "prod": (REPO / "backend" / ".env", "sa-east-1", "ttqtefwntkgpgatrcyps", "gesqstdtbbdhlravddhd")}
-MASTER_EMAIL = "diego@pmongerenciamento.com.br"
+MASTER_EMAIL = None  # preenchido por load_dsn() com MASTER_EMAIL do .env do alvo
 
 CANDIDATES_SQL = """
 select c.id as contract_id, p.team_id,
@@ -52,13 +54,18 @@ select c.id as contract_id, p.team_id,
 
 
 def load_dsn(target):
+    global MASTER_EMAIL
     path, host, ref, other = TARGETS[target]
     dsn = ""
     for line in path.read_text(encoding="utf-8").splitlines():
         if line.strip().startswith("DATABASE_URL="):
             dsn = line.split("=", 1)[1].strip().strip('"').strip("'")
+        if line.strip().startswith("MASTER_EMAIL="):
+            MASTER_EMAIL = line.split("=", 1)[1].strip().strip('"').strip("'")
     if host not in dsn or ref not in dsn or other in dsn:
         sys.exit(f"ABORTADO: DATABASE_URL não confere com {target}")
+    if not MASTER_EMAIL or "@" not in MASTER_EMAIL:
+        sys.exit(f"ABORTADO: MASTER_EMAIL ausente ou inválido no .env de {target}")
     return dsn
 
 
@@ -67,7 +74,7 @@ async def main():
         sys.exit("uso: carga_inicial_splits.py staging|prod [commit]")
     target, commit = sys.argv[1], len(sys.argv) > 2 and sys.argv[2] == "commit"
     dsn = load_dsn(target)
-    c = await asyncpg.connect(dsn)
+    c = await asyncpg.connect(dsn, ssl=_lib.ssl_ctx(target))
     tr = c.transaction()
     await tr.start()
     finished = False

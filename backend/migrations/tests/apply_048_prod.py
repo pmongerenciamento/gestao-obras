@@ -40,17 +40,18 @@ Verificações esperadas na conexão nova: 23
 """
 import asyncio
 import re
-import ssl
 import sys
 from pathlib import Path
 
 import asyncpg
 
+import _lib
+
 ROOT = Path(r"C:\Users\pmon_admin\Documents\gestao-obras\backend")
 ENV = ROOT / ".env"
 MIGRATION = ROOT / "migrations" / "048_split_retroactive_master_only.sql"
 REQUIRED_HOST = "sa-east-1"
-MASTER_EMAIL = "diego@pmongerenciamento.com.br"
+MASTER_EMAIL = None  # preenchido por load_dsn() com MASTER_EMAIL de backend/.env
 STAGING_REF = "gesqstdtbbdhlravddhd"
 PROD_REF = "ttqtefwntkgpgatrcyps"
 OLD_SPLITS = "public.set_contract_splits(uuid, jsonb)"
@@ -88,18 +89,19 @@ def record(name, ok, detail=""):
 
 
 def load_dsn():
+    global MASTER_EMAIL
+    vals = {}
     for line in ENV.read_text(encoding="utf-8").splitlines():
         line = line.strip()
-        if line.startswith("DATABASE_URL="):
-            return line.split("=", 1)[1].strip().strip('"').strip("'")
-    abort("DATABASE_URL não encontrado em backend/.env")
-
-
-def ssl_ctx():
-    ctx = ssl.create_default_context()
-    ctx.check_hostname = False
-    ctx.verify_mode = ssl.CERT_NONE
-    return ctx
+        if line and not line.startswith("#") and "=" in line:
+            k, v = line.split("=", 1)
+            vals[k.strip()] = v.strip().strip('"').strip("'")
+    MASTER_EMAIL = vals.get("MASTER_EMAIL", "")
+    if "@" not in MASTER_EMAIL:
+        abort("MASTER_EMAIL ausente ou inválido em backend/.env")
+    if not vals.get("DATABASE_URL"):
+        abort("DATABASE_URL não encontrado em backend/.env")
+    return vals["DATABASE_URL"]
 
 
 async def check(c, name, sql, expected, *args):
@@ -155,7 +157,7 @@ async def master_ids(c):
 
 # ---------- travas + medição + aplicação ----------
 async def apply(dsn, sql):
-    c = await asyncpg.connect(dsn=dsn, ssl=ssl_ctx())
+    c = await asyncpg.connect(dsn=dsn, ssl=_lib.ssl_ctx("prod"))
     try:
         num = int(await c.fetchval("show server_version_num"))
         print(f"server_version_num: {num}")
@@ -201,7 +203,7 @@ async def apply(dsn, sql):
 
 # ---------- conferência em conexão nova ----------
 async def verify(dsn, diego, before):
-    c = await asyncpg.connect(dsn=dsn, ssl=ssl_ctx())
+    c = await asyncpg.connect(dsn=dsn, ssl=_lib.ssl_ctx("prod"))
     try:
         async with c.transaction(readonly=True):
             print(f"[conexão nova] transaction_read_only: {await c.fetchval('show transaction_read_only')}")

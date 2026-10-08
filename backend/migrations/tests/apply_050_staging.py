@@ -39,12 +39,13 @@ Verificações esperadas na conexão nova: 49
 import asyncio
 import datetime
 import re
-import ssl
 import sys
 from decimal import Decimal
 from pathlib import Path
 
 import asyncpg
+
+import _lib
 
 ROOT = Path(r"C:\Users\pmon_admin\Documents\gestao-obras\backend")
 ENV = ROOT / ".env.staging"
@@ -103,13 +104,6 @@ def load_dsn():
     abort("DATABASE_URL não encontrado em backend/.env.staging")
 
 
-def ssl_ctx():
-    ctx = ssl.create_default_context()
-    ctx.check_hostname = False
-    ctx.verify_mode = ssl.CERT_NONE
-    return ctx
-
-
 async def check(c, name, sql, expected, *args):
     v = await c.fetchval(sql, *args)
     record(name, v == expected, f"esperado {expected!r}, veio {v!r}")
@@ -132,7 +126,7 @@ async def fingerprints(c):
 
 # ---------- travas + medição + aplicação ----------
 async def apply(dsn, sql):
-    c = await asyncpg.connect(dsn=dsn, ssl=ssl_ctx())
+    c = await asyncpg.connect(dsn=dsn, ssl=_lib.ssl_ctx("staging"))
     try:
         num = int(await c.fetchval("show server_version_num"))
         print(f"server_version_num: {num}")
@@ -209,7 +203,7 @@ async def verify_structure(c):
 
 
 async def verify(dsn, before):
-    c = await asyncpg.connect(dsn=dsn, ssl=ssl_ctx())
+    c = await asyncpg.connect(dsn=dsn, ssl=_lib.ssl_ctx("staging"))
     try:
         async with c.transaction(readonly=True):
             print(f"[conexão nova] transaction_read_only: {await c.fetchval('show transaction_read_only')}")

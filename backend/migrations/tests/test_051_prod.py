@@ -74,6 +74,8 @@ from pathlib import Path
 
 import asyncpg
 
+import _lib
+
 REPO = Path(r"C:\Users\pmon_admin\Documents\gestao-obras")
 ENV_FILE = REPO / "backend" / ".env"
 MASTER_EMAIL = None  # preenchido por read_dsn() com MASTER_EMAIL de backend/.env
@@ -674,7 +676,7 @@ async def run_tests(c, sql, before):
 
 
 async def post_check(dsn, before, fp_before):
-    c2 = await asyncpg.connect(dsn)
+    c2 = await asyncpg.connect(dsn, ssl=_lib.ssl_ctx("prod"))
     try:
         async with c2.transaction(readonly=True):
             ro = await c2.fetchval("show transaction_read_only")
@@ -717,7 +719,7 @@ async def post_check(dsn, before, fp_before):
 async def main():
     dsn = read_dsn()
     sql = MIGRATION.read_text(encoding="utf-8")
-    c = await asyncpg.connect(dsn)
+    c = await asyncpg.connect(dsn, ssl=_lib.ssl_ctx("prod"))
     tr = c.transaction()
     started = False
     try:

@@ -70,6 +70,8 @@ from pathlib import Path
 
 import asyncpg
 
+import _lib
+
 REPO = Path(r"C:\Users\pmon_admin\Documents\gestao-obras")
 ENV_FILE = REPO / "backend" / ".env.staging"
 MIGRATION = REPO / "backend" / "migrations" / "049_contract_term_months.sql"
@@ -1309,7 +1311,7 @@ async def run_tests(c, sql, before):
 
 
 async def post_check(dsn, before):
-    c2 = await asyncpg.connect(dsn)
+    c2 = await asyncpg.connect(dsn, ssl=_lib.ssl_ctx("staging"))
     try:
         async with c2.transaction(readonly=True):
             ro = await c2.fetchval("show transaction_read_only")
@@ -1343,7 +1345,7 @@ async def post_check(dsn, before):
 async def main():
     dsn = read_dsn()
     sql = MIGRATION.read_text(encoding="utf-8")
-    c = await asyncpg.connect(dsn)
+    c = await asyncpg.connect(dsn, ssl=_lib.ssl_ctx("staging"))
     tr = c.transaction()
     started = False
     try:

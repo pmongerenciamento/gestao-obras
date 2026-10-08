@@ -73,9 +73,11 @@ from pathlib import Path
 
 import asyncpg
 
+import _lib
+
 REPO = Path(r"C:\Users\pmon_admin\Documents\gestao-obras")
 ENV_FILE = REPO / "backend" / ".env"
-MASTER_EMAIL = "diego@pmongerenciamento.com.br"
+MASTER_EMAIL = None  # preenchido por read_dsn() com MASTER_EMAIL de backend/.env
 # (chave, tabela, expressão json da linha). contract_revenue_splits sem a
 # coluna da 047, para comparar antes (sem coluna) e dentro da transação (com).
 REAL_TABLES = [("auth_users", "auth.users", "to_jsonb(x)"),
@@ -140,6 +142,10 @@ def read_dsn():
         abort("DATABASE_URL não contém a ref de produção")
     if STAGING_REF in dsn:
         abort("DATABASE_URL contém a ref de STAGING")
+    global MASTER_EMAIL
+    MASTER_EMAIL = vals.get("MASTER_EMAIL", "")
+    if "@" not in MASTER_EMAIL:
+        abort("MASTER_EMAIL ausente ou inválido em backend/.env")
     return dsn
 
 
@@ -982,7 +988,7 @@ async def run_tests(c, sql, close_deal_before):
 
 
 async def post_check(dsn, close_deal_before, genext_before, fp_before, diego):
-    c2 = await asyncpg.connect(dsn)
+    c2 = await asyncpg.connect(dsn, ssl=_lib.ssl_ctx("prod"))
     try:
         async with c2.transaction(readonly=True):
             ro = await c2.fetchval("show transaction_read_only")
@@ -1025,7 +1031,7 @@ async def post_check(dsn, close_deal_before, genext_before, fp_before, diego):
 async def main():
     dsn = read_dsn()
     sql = MIGRATION.read_text(encoding="utf-8")
-    c = await asyncpg.connect(dsn)
+    c = await asyncpg.connect(dsn, ssl=_lib.ssl_ctx("prod"))
     tr = c.transaction()
     started = False
     try:

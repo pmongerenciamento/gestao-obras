@@ -41,11 +41,12 @@ Verificações esperadas na conexão nova: 37
 """
 import asyncio
 import re
-import ssl
 import sys
 from pathlib import Path
 
 import asyncpg
+
+import _lib
 
 ROOT = Path(r"C:\Users\pmon_admin\Documents\gestao-obras\backend")
 ENV = ROOT / ".env"
@@ -109,13 +110,6 @@ def load_env():
     return vals
 
 
-def ssl_ctx():
-    ctx = ssl.create_default_context()
-    ctx.check_hostname = False
-    ctx.verify_mode = ssl.CERT_NONE
-    return ctx
-
-
 async def check(c, name, sql, expected, *args):
     v = await c.fetchval(sql, *args)
     record(name, v == expected, f"esperado {expected!r}, veio {v!r}")
@@ -154,7 +148,7 @@ async def master_ids(c):
 
 # ---------- travas + medição + aplicação ----------
 async def apply(dsn, sql, master_email):
-    c = await asyncpg.connect(dsn=dsn, ssl=ssl_ctx())
+    c = await asyncpg.connect(dsn=dsn, ssl=_lib.ssl_ctx("prod"))
     try:
         num = int(await c.fetchval("show server_version_num"))
         print(f"server_version_num: {num}")
@@ -241,7 +235,7 @@ async def verify_structure(c, before):
 
 
 async def verify(dsn, diego, before):
-    c = await asyncpg.connect(dsn=dsn, ssl=ssl_ctx())
+    c = await asyncpg.connect(dsn=dsn, ssl=_lib.ssl_ctx("prod"))
     try:
         async with c.transaction(readonly=True):
             print(f"[conexão nova] transaction_read_only: {await c.fetchval('show transaction_read_only')}")
