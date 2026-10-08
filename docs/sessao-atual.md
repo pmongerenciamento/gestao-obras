@@ -609,3 +609,24 @@ PENDENTE:
 - close_deal copiando prazo, intervalo e SPE sem sobrescrever dados já preenchidos; tirar 'parcelado' dos checks.
 - Segurança: certificado do banco nos scripts; e-mail do master nos scripts da 047 e da 048; repositório privado.
 - Decisões e dados: caminho dos DRE de julho; portfólio dos dois Orçamentos de julho; planilha da Vanessa.
+
+## Sessão 2026-10-08 - Certificado TLS, reembolso (052, 053) e correções de frontend
+
+- Verificação de certificado TLS em todos os scripts de migration: backend/migrations/tests/_lib.py com ssl_ctx(target), usando a CA raiz da Supabase em backend/certs (cadeia, assinatura e hostname verificados). VERIFY_X509_STRICT desligado porque a CA intermediária da Supabase não tem a extensão Key Usage (confirmado via openssl s_client em staging e produção). O ssl_ctx() local com CERT_NONE e as conexões sem ssl= saíram de todos os apply_*, test_* e carga_inicial_splits.py (047 a 051); os 10 apply_* foram reexecutados e abortaram na pré-condição de "já aplicada", sem gravar nada. E-mail do master fora do código nos scripts da 047, da 048 e na carga (passa a vir de MASTER_EMAIL no .env). Commit 034b681.
+- Migration 052 aplicada em staging (staging em 001-052; produção continua em 001-051). Policies de itens separadas por comando, com DELETE só do dono em rascunho; aprovação e rejeição só pelo master (is_master()), nunca do próprio relatório, só a partir de 'enviado', com gatilho que só deixa mudar status, approved_by, approved_at e rejection_reason; gatilho que confere o total do item contra a taxa vigente na data da despesa; coluna receipt_path; regra "Time Diego/Murillo 100%"; default_allocation_rule_for_profile devolve NULL para time sem regra ou perfil sem time, em vez de "Rateio Sócios 50/50". Testes: staging com rollback 79/79, apply em staging 23/23.
+- Migration 053 aplicada em staging (staging em 001-053). approved_amount (nulo = aprovado pelo valor pedido; maior, menor ou zero; nunca negativo) e approval_note por item; só o master grava, em relatório de outro usuário em 'enviado', e nessa situação só essas duas colunas podem mudar; o item nasce sem valor aprovado. Valor a pagar = soma de coalesce(approved_amount, total_amount) dos itens, ainda sem view ou função. Testes: staging com rollback 45/45, apply em staging 16/16.
+- close_deal não foi alterado na 052 nem na 053. Commit 58ac433 (migrations e scripts).
+- Staging: o perfil do Diego virou master (system_role, conexão direta sem usuário logado, como a 043 exige); senha da conta do Diego em staging trocada pela API de administração.
+- Frontend do reembolso: consultas trocadas de cost_centers para expense_categories (o nome antigo deixava categorias e itens vazios sem erro); /reembolso/aprovacoes e o link "Ver aprovações" liberados para o master, além do módulo financeiro; listMyReports() filtra pelo usuário logado (a RLS deixa financeiro e master verem os relatórios de todos). tsc sem erros. Commit abf3905.
+- Testes manuais do Diego em staging: o link de aprovação não aparecia para o master (corrigido).
+
+PENDENTE:
+- Reembolso, antes de levar a 052 para produção: approveReport() e rejectReport() precisam conferir que 1 linha foi alterada (um UPDATE barrado pela RLS volta sem erro e com 0 linhas, e a tela trata como sucesso); os botões de aprovar e rejeitar devem aparecer só para o master, não para quem só tem o módulo financeiro (pela 052, o financeiro lê a fila mas não aprova).
+- Reembolso, também antes de produção: as taxas de produção começam em 2026-10-03, e o gatilho de total da 052 recusa item com despesa anterior a essa data; rejectReport() não grava approved_by (manter o rastro de quem rejeitou).
+- Reembolso, frontend da 053: valor aprovado e observação por item na tela de aprovação; soma do valor a pagar (view ou função na migration que liga reembolso a pagamento).
+- Comprovante: bucket privado criado à mão no painel (staging e produção), upload no frontend e só então a migration que exige comprovante (o cabeçalho da 052 cita "053", número que ficou com o valor aprovado).
+- Propostas do Diego, abertas e sem decisão: categoria fixa por tipo de despesa nas telas de lançamento; projeto "00 PMON" (não encontrado em staging), decisão pendente.
+- Produção: testar e aplicar 052 e 053 (testes de produção com rollback, depois apply).
+- Staging: tirar STAGING_NEW_PASSWORD do backend/.env.staging e trocar a senha de teste por uma definitiva.
+- Segurança: repositório privado.
+- Demais pendências da sessão de 2026-10-07 (cadastro, views do DRE, close_deal) continuam.
