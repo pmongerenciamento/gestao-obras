@@ -5,19 +5,19 @@ import { listPendingApprovals } from "@/lib/api/reimbursements";
 import { listUserModules } from "@/lib/api/modules";
 import { createClient } from "@/lib/supabase/server";
 
-// Fila de aprovação: hoje só o módulo 'financeiro' tem
-// has_permission('reimbursement_reports','write') (030), então checar o
-// módulo aqui é equivalente — mesmo padrão de proxy já usado em
-// ComercialPage/CrmPage (RLS é quem de fato protege os dados; isto só evita
-// renderizar uma tela vazia/quebrada pra quem não tem acesso).
+// Fila de aprovação: entra quem tem o módulo 'financeiro' ou é master
+// (is_master(), 043 — mesma chamada de lib/api/access.ts). A partir da 052,
+// aprovar e rejeitar são só do master; o financeiro continua lendo a fila.
+// RLS é quem de fato protege os dados; isto só evita renderizar uma tela
+// vazia/quebrada pra quem não tem acesso.
 export default async function ReimbursementApprovalsPage() {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const userModules = await listUserModules();
-  if (!userModules.includes("financeiro")) redirect("/reembolso");
+  const [userModules, { data: isMaster }] = await Promise.all([listUserModules(), supabase.rpc("is_master")]);
+  if (!userModules.includes("financeiro") && isMaster !== true) redirect("/reembolso");
 
   const reports = await listPendingApprovals();
 

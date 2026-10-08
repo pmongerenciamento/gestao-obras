@@ -17,8 +17,9 @@ export default async function ApprovalDetailPage({ params }: ApprovalDetailPageP
     data: { user },
   } = await supabase.auth.getUser();
 
-  const userModules = await listUserModules();
-  if (!userModules.includes("financeiro")) redirect("/reembolso");
+  // Mesma regra de /reembolso/aprovacoes: módulo 'financeiro' ou master.
+  const [userModules, { data: isMaster }] = await Promise.all([listUserModules(), supabase.rpc("is_master")]);
+  if (!userModules.includes("financeiro") && isMaster !== true) redirect("/reembolso");
 
   const report = await getReport(reportId);
   if (!report) notFound();

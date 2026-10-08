@@ -11,9 +11,10 @@ import { createClient as createSupabaseServerClient } from "@/lib/supabase/serve
 
 // Leitura do módulo Reembolso (backend/migrations/030_create_reimbursements.sql).
 // Reembolso não segue o sistema de permissões por módulo — é aberto a
-// qualquer funcionário autenticado. RLS de reimbursement_reports/items já
-// restringe cada usuário aos próprios relatórios (profile_id = auth.uid()),
-// então não filtramos por usuário aqui de novo.
+// qualquer funcionário autenticado. A RLS de reimbursement_reports/items
+// libera ao dono os próprios relatórios e, a quem tem o módulo financeiro ou
+// é master (052), os de todos; por isso listMyReports filtra pelo usuário
+// logado explicitamente.
 
 interface ReportRow {
   id: string;
@@ -56,11 +57,17 @@ function mapReportRow(row: ReportRow): ReportWithTotal {
 
 export async function listMyReports(): Promise<ReportWithTotal[]> {
   const supabase = await createSupabaseServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return [];
+
   const { data, error } = await supabase
     .from("reimbursement_reports")
     .select(
       "id, profile_id, period_start, period_end, status, rejection_reason, approved_by, approved_at, created_at, updated_at, reimbursement_items(total_amount)",
     )
+    .eq("profile_id", user.id)
     .order("created_at", { ascending: false });
 
   if (error || !data) return [];
@@ -139,7 +146,7 @@ interface ItemRow {
   requires_preapproval: boolean;
   total_amount: number;
   projects: { name: string } | null;
-  cost_centers: { name: string } | null;
+  expense_categories: { name: string } | null;
 }
 
 function mapItemRow(row: ItemRow): ReimbursementItem {
@@ -150,7 +157,7 @@ function mapItemRow(row: ItemRow): ReimbursementItem {
     projectId: row.project_id,
     projectName: row.projects?.name ?? null,
     costCenterId: row.cost_center_id,
-    costCenterName: row.cost_centers?.name ?? null,
+    costCenterName: row.expense_categories?.name ?? null,
     expenseDate: row.expense_date,
     description: row.description,
     kmTraveled: row.km_traveled !== null ? Number(row.km_traveled) : null,
@@ -167,7 +174,7 @@ export async function listReportItems(reportId: string): Promise<ReimbursementIt
   const { data, error } = await supabase
     .from("reimbursement_items")
     .select(
-      "id, report_id, type, project_id, cost_center_id, expense_date, description, km_traveled, km_rate, toll_amount, other_amount, requires_preapproval, total_amount, projects(name), cost_centers(name)",
+      "id, report_id, type, project_id, cost_center_id, expense_date, description, km_traveled, km_rate, toll_amount, other_amount, requires_preapproval, total_amount, projects(name), expense_categories(name)",
     )
     .eq("report_id", reportId)
     .order("expense_date", { ascending: false });
@@ -178,7 +185,7 @@ export async function listReportItems(reportId: string): Promise<ReimbursementIt
 
 export async function listCostCenters(): Promise<CostCenter[]> {
   const supabase = await createSupabaseServerClient();
-  const { data, error } = await supabase.from("cost_centers").select("id, name").order("name");
+  const { data, error } = await supabase.from("expense_categories").select("id, name").order("name");
 
   if (error || !data) return [];
   return data;
