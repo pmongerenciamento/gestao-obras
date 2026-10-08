@@ -595,3 +595,17 @@ PENDENTE:
 - Fechar a escrita direta em contract_readjustments; quando a emissão existir, travar as versões fiscais já usadas numa nota emitida.
 - Decisões e dados: caminho dos DRE de julho; portfólio dos dois Orçamentos de julho; planilha da Vanessa incompleta; Carlos e Weslley sem módulos e times; Murillo só com reembolso (teste); full_name dos perfis; login da Vercel antes de dar acesso aos colegas.
 - Estudos: salvamento automático no Drive, conciliação, pagamento de contas pelo banco; emissão automática em janeiro.
+
+## Sessão 2026-10-07 (continuação) - SPE do contrato (051)
+
+- Migration 051 aplicada em staging e em produção (ambos em 001-051). contracts.billing_entity_id (opcional; vazio = a SPE do projeto), contract_billing_entity_id(contrato) devolve a SPE que vale, gatilho que impede inserir contrato já encerrado pela API (fecha a brecha da 049) e gatilho que só aceita SPE do mesmo projeto ou de projeto do mesmo cliente. Comentário em document_lead_days: sem significado nem uso.
+- Limite: a regra da SPE é conferida só quando o contrato é gravado; mudar depois o client_id do projeto ou o project_id da SPE não reavalia contratos existentes.
+- close_deal NÃO foi alterado (md5 igual). Pendência dele: fechar negócio informando o CNPJ de uma SPE já cadastrada em outro projeto falha com 23505; nesse caso o contrato é cadastrado pela tela, apontando para a SPE existente.
+- Testes: staging com rollback 66/66, apply em staging 23/23, produção com rollback 127/127, apply em produção 37/37. O service_role tem INSERT em contracts (grants padrão do Supabase), conferido em staging e produção, para a carga dos contratos.
+
+PENDENTE:
+- Auditoria do módulo de reembolso e liberação para os sócios (login da Vercel, publicação, full_name dos perfis, módulos de Carlos e Weslley).
+- Tela de cadastro de clientes e contratos (SPE, dados fiscais, destinatários) e carga dos contratos reais; view de completude; views do DRE.
+- close_deal copiando prazo, intervalo e SPE sem sobrescrever dados já preenchidos; tirar 'parcelado' dos checks.
+- Segurança: certificado do banco nos scripts; e-mail do master nos scripts da 047 e da 048; repositório privado.
+- Decisões e dados: caminho dos DRE de julho; portfólio dos dois Orçamentos de julho; planilha da Vanessa.
