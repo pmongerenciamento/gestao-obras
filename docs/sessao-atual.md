@@ -621,8 +621,9 @@ PENDENTE:
 - Testes manuais do Diego em staging: o link de aprovação não aparecia para o master (corrigido).
 
 PENDENTE:
-- Reembolso, antes de levar a 052 para produção: approveReport() e rejectReport() precisam conferir que 1 linha foi alterada (um UPDATE barrado pela RLS volta sem erro e com 0 linhas, e a tela trata como sucesso); os botões de aprovar e rejeitar devem aparecer só para o master, não para quem só tem o módulo financeiro (pela 052, o financeiro lê a fila mas não aprova).
-- Reembolso, também antes de produção: as taxas de produção começam em 2026-10-03, e o gatilho de total da 052 recusa item com despesa anterior a essa data; rejectReport() não grava approved_by (manter o rastro de quem rejeitou).
+- Feito em 2026-10-08: approveReport, rejectReport, submitForApproval e reopenReport conferem linha afetada; botões de aprovar/rejeitar só para o master (commit 78aca37).
+- Reembolso, também antes de produção: as taxas de produção começam em 2026-10-01, e o gatilho de total da 052 recusa item com despesa anterior a essa data; rejectReport() não grava approved_by (manter o rastro de quem rejeitou).
+- Feito em 2026-10-08 (dado, sem commit de código): as 3 taxas de reembolso de produção tiveram o início antecipado de 2026-10-03 para 2026-10-01 (só effective_start_date; produção não tinha nenhum item de reembolso). Staging não mudou (taxas desde 2026-07-09).
 - Reembolso, frontend da 053: valor aprovado e observação por item na tela de aprovação; soma do valor a pagar (view ou função na migration que liga reembolso a pagamento).
 - Comprovante: bucket privado criado à mão no painel (staging e produção), upload no frontend e só então a migration que exige comprovante (o cabeçalho da 052 cita "053", número que ficou com o valor aprovado).
 - Propostas do Diego, abertas e sem decisão: categoria fixa por tipo de despesa nas telas de lançamento; projeto "00 PMON" (não encontrado em staging), decisão pendente.
