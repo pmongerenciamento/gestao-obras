@@ -627,7 +627,8 @@ PENDENTE:
 - Reembolso, frontend da 053: valor aprovado e observação por item na tela de aprovação; soma do valor a pagar (view ou função na migration que liga reembolso a pagamento).
 - Comprovante: bucket privado criado à mão no painel (staging e produção), upload no frontend e só então a migration que exige comprovante (o cabeçalho da 052 cita "053", número que ficou com o valor aprovado).
 - Propostas do Diego, abertas e sem decisão: categoria fixa por tipo de despesa nas telas de lançamento; projeto "00 PMON" (não encontrado em staging), decisão pendente.
-- Produção: testar e aplicar 052 e 053 (testes de produção com rollback, depois apply).
+- Feito em 2026-10-08: 052 e 053 testadas com rollback em produção (052: 161/161; 053: 127/127) e aplicadas com commit (052: 44/44; 053: 39/39). Produção e staging em 001-053 (commit dbf8aa7).
+- Publicar em produção o frontend do reembolso (commits abf3905 e 78aca37, hoje só no feature/clientes-crm): até lá, a tela de produção segue a regra antiga (link de aprovação para o financeiro, aprovação que não grava nada e não avisa).
 - Staging: tirar STAGING_NEW_PASSWORD do backend/.env.staging e trocar a senha de teste por uma definitiva.
 - Segurança: repositório privado.
 - Demais pendências da sessão de 2026-10-07 (cadastro, views do DRE, close_deal) continuam.
