@@ -24,6 +24,9 @@ export default async function ApprovalDetailPage({ params }: ApprovalDetailPageP
   const report = await getReport(reportId);
   if (!report) notFound();
 
+  // 052: só o master aprova ou rejeita, nunca o próprio relatório.
+  const canApprove = isMaster === true && report.profileId !== user?.id;
+
   const [items, requesterNameResult] = await Promise.all([
     listReportItems(reportId),
     supabase.rpc("profile_display_name", { p_profile_id: report.profileId }),
@@ -42,7 +45,12 @@ export default async function ApprovalDetailPage({ params }: ApprovalDetailPageP
         userEmail={user?.email}
       />
       <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col px-6 py-8">
-        <ApprovalDetailView report={report} items={items} requesterName={requesterName} />
+        <ApprovalDetailView
+          report={report}
+          items={items}
+          requesterName={requesterName}
+          canApprove={canApprove}
+        />
       </main>
     </div>
   );

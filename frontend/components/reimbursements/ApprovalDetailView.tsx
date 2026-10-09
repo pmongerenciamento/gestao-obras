@@ -27,9 +27,10 @@ interface ApprovalDetailViewProps {
   report: ReimbursementReport;
   items: ReimbursementItem[];
   requesterName: string;
+  canApprove: boolean;
 }
 
-export function ApprovalDetailView({ report, items, requesterName }: ApprovalDetailViewProps) {
+export function ApprovalDetailView({ report, items, requesterName, canApprove }: ApprovalDetailViewProps) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -37,7 +38,7 @@ export function ApprovalDetailView({ report, items, requesterName }: ApprovalDet
   const [rejectReason, setRejectReason] = useState("");
 
   const total = items.reduce((sum, item) => sum + item.totalAmount, 0);
-  const canAct = report.status === "enviado";
+  const canAct = report.status === "enviado" && canApprove;
 
   async function handleApprove() {
     setActionError(null);

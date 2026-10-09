@@ -72,19 +72,27 @@ export async function createItem(reportId: string, input: NewItemInput): Promise
   if (error) throw error;
 }
 
+// As quatro mudanças de status abaixo usam .select("id").single(), mesmo padrão
+// de updateProjectStage (pipeline-mutations.ts): a RLS filtra em silêncio as
+// linhas que o usuário não pode alterar (0 linhas, sem erro de Postgres), e o
+// .single() com 0 linhas devolvidas vira erro do PostgREST, detectável aqui.
+
 export async function submitForApproval(reportId: string): Promise<void> {
   const supabase = createSupabaseClient();
 
   const { error } = await supabase
     .from("reimbursement_reports")
     .update({ status: "enviado" })
-    .eq("id", reportId);
+    .eq("id", reportId)
+    .select("id")
+    .single();
 
-  if (error) throw error;
+  if (error) throw new Error("Não foi possível enviar o relatório: só o dono envia, e só um relatório em rascunho.");
 }
 
-// Tela /reembolso/aprovacoes: RLS (reimbursement_reports_approve, 030) só
-// deixa passar quem tem has_permission('reimbursement_reports','write').
+// Tela /reembolso/aprovacoes: pela 052, só o master aprova ou rejeita
+// (reimbursement_reports_approve com is_master()), nunca o próprio relatório e
+// só a partir de 'enviado'.
 export async function approveReport(reportId: string): Promise<void> {
   const supabase = createSupabaseClient();
   const approverId = await getCurrentUserId();
@@ -92,9 +100,13 @@ export async function approveReport(reportId: string): Promise<void> {
   const { error } = await supabase
     .from("reimbursement_reports")
     .update({ status: "aprovado", approved_by: approverId, approved_at: new Date().toISOString() })
-    .eq("id", reportId);
+    .eq("id", reportId)
+    .select("id")
+    .single();
 
-  if (error) throw error;
+  if (error) {
+    throw new Error("Não foi possível aprovar: só o master aprova, nunca o próprio relatório, e só relatórios enviados.");
+  }
 }
 
 export async function rejectReport(reportId: string, reason: string): Promise<void> {
@@ -103,9 +115,13 @@ export async function rejectReport(reportId: string, reason: string): Promise<vo
   const { error } = await supabase
     .from("reimbursement_reports")
     .update({ status: "rejeitado", rejection_reason: reason })
-    .eq("id", reportId);
+    .eq("id", reportId)
+    .select("id")
+    .single();
 
-  if (error) throw error;
+  if (error) {
+    throw new Error("Não foi possível rejeitar: só o master rejeita, nunca o próprio relatório, e só relatórios enviados.");
+  }
 }
 
 // "Corrigir e reenviar": volta um relatório rejeitado pra rascunho, editável
@@ -119,7 +135,9 @@ export async function reopenReport(reportId: string): Promise<void> {
   const { error } = await supabase
     .from("reimbursement_reports")
     .update({ status: "rascunho", rejection_reason: null })
-    .eq("id", reportId);
+    .eq("id", reportId)
+    .select("id")
+    .single();
 
-  if (error) throw error;
+  if (error) throw new Error("Não foi possível reabrir: só o dono reabre, e só um relatório rejeitado.");
 }
